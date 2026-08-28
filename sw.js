@@ -35,12 +35,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 const firebaseConfig = {
-  apiKey: 'sua-api-key-aqui',
-  authDomain: 'seu-projeto.firebaseapp.com',
-  projectId: 'seu-projeto',
-  storageBucket: 'seu-projeto.appspot.com',
-  messagingSenderId: '000000000000',
-  appId: '1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx',
+  apiKey: 'AIzaSyC0pO6cmfg-zwy6VHbw8u_GLTRKKF8-ayo',
+  authDomain: 'lava-jato-eaa4c.firebaseapp.com',
+  projectId: 'lava-jato-eaa4c',
+  storageBucket: 'lava-jato-eaa4c.firebasestorage.app',
+  messagingSenderId: '1070905124396',
+  appId: '1:1070905124396:web:6bac64f732a810ae6dd389',
 };
 
 try {
