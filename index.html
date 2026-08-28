@@ -292,44 +292,110 @@
 <body>
 <div id="app"></div>
 <div id="toast-root" class="toast-root"></div>
-<script id="app-logic">
+<script id="app-logic" type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
+  onSnapshot, arrayUnion
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getMessaging, getToken, isSupported as messagingIsSupported } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
+
 (function(){
   "use strict";
 
-  var STATE_KEY = 'lavajato_state_v1';
   var SESSION_KEY = 'lavajato_session_v1';
 
-  function defaultState(){
-    return {
-      businessName: 'LAVA JATO',
-      adminPin: '1234',
-      services: [
+  // ---- Firebase: substitua pelos valores reais do seu projeto (veja o guia que o Claude te passou) ----
+  var firebaseConfig = {
+    apiKey: 'sua-api-key-aqui',
+    authDomain: 'seu-projeto.firebaseapp.com',
+    projectId: 'seu-projeto',
+    storageBucket: 'seu-projeto.appspot.com',
+    messagingSenderId: '000000000000',
+    appId: '1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx',
+  };
+  // Cloud Messaging → Certificados push da Web → Gerar par de chaves.
+  var VAPID_KEY = 'sua-vapid-key-aqui';
+
+  var fbApp = initializeApp(firebaseConfig);
+  var db = getFirestore(fbApp);
+  var auth = getAuth(fbApp);
+  var authReady = signInAnonymously(auth).catch(function(err){ console.error('Falha no login anonimo do Firebase:', err); });
+
+  var CONFIG_REF = doc(db, 'config', 'geral');
+  var COL = {
+    clients: collection(db, 'clients'),
+    cars: collection(db, 'cars'),
+    appointments: collection(db, 'appointments'),
+    services: collection(db, 'services')
+  };
+
+  function defaultAvailability(){
+    return { workDays:[1,2,3,4,5,6], startTime:'08:00', endTime:'18:00', slotMinutes:30, blockedDates:[] };
+  }
+
+  /* ---------- state (sincronizado em tempo real com o Firestore) ---------- */
+  var state = {
+    businessName: 'LAVA JATO',
+    adminPin: '1234',
+    services: [],
+    availability: defaultAvailability(),
+    clients: [],
+    cars: [],
+    appointments: [],
+    adminTokens: []
+  };
+
+  function watchCollection(name, colRef){
+    onSnapshot(colRef, function(snap){
+      state[name] = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+      render();
+    }, function(err){ console.error('Erro ao sincronizar ' + name + ':', err); });
+  }
+
+  function seedServicesIfEmpty(){
+    return getDocs(COL.services).then(function(snap){
+      if(!snap.empty) return;
+      var defaults = [
         { id:'s1', name:'Lavagem Simples', description:'Lavagem externa completa com secagem', durationMin:30, priceCents:3500 },
         { id:'s2', name:'Lavagem Completa', description:'Externa e interna, painel e tapetes', durationMin:60, priceCents:6000 },
         { id:'s3', name:'Lavagem + Cera', description:'Lavagem completa com aplicacao de cera protetora', durationMin:90, priceCents:9000 },
         { id:'s4', name:'Higienizacao Interna', description:'Bancos, forracao e carpete', durationMin:75, priceCents:8000 },
         { id:'s5', name:'Polimento', description:'Remocao de riscos leves e brilho na pintura', durationMin:120, priceCents:15000 }
-      ],
-      availability: { workDays:[1,2,3,4,5,6], startTime:'08:00', endTime:'18:00', slotMinutes:30, blockedDates:[] },
-      clients: [],
-      cars: [],
-      appointments: []
-    };
+      ];
+      return Promise.all(defaults.map(function(s){
+        return setDoc(doc(db, 'services', s.id), {
+          name: s.name, description: s.description, durationMin: s.durationMin, priceCents: s.priceCents
+        });
+      }));
+    });
   }
 
-  /* ---------- state ---------- */
-  var state = loadState();
-
-  function loadState(){
-    try{
-      var raw = localStorage.getItem(STATE_KEY);
-      if(!raw) return defaultState();
-      var parsed = JSON.parse(raw);
-      return Object.assign(defaultState(), parsed);
-    }catch(e){ return defaultState(); }
-  }
-  function saveState(){
-    try{ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }catch(e){}
+  function bootFirebase(){
+    return authReady.then(function(){
+      return getDoc(CONFIG_REF);
+    }).then(function(snap){
+      if(!snap.exists()){
+        return setDoc(CONFIG_REF, { businessName:'LAVA JATO', adminPin:'1234', availability: defaultAvailability(), adminTokens: [] });
+      }
+    }).then(seedServicesIfEmpty).then(function(){
+      onSnapshot(CONFIG_REF, function(snap){
+        var c = snap.data() || {};
+        state.businessName = c.businessName || 'LAVA JATO';
+        state.adminPin = c.adminPin || '1234';
+        state.availability = c.availability || defaultAvailability();
+        state.adminTokens = c.adminTokens || [];
+        render();
+      });
+      watchCollection('clients', COL.clients);
+      watchCollection('cars', COL.cars);
+      watchCollection('appointments', COL.appointments);
+      watchCollection('services', COL.services);
+    }).catch(function(err){
+      console.error('Erro ao iniciar Firebase:', err);
+      toast('Nao foi possivel conectar ao banco de dados.');
+    });
   }
 
   var SESSION = loadSession();
@@ -348,7 +414,6 @@
   }
 
   /* ---------- utils ---------- */
-  function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
   function esc(s){
     return String(s==null?'':s).replace(/[&<>"']/g, function(c){
       return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
@@ -536,12 +601,25 @@
     }[status] || { label:status };
   }
 
-  /* ---------- persistence ---------- */
-  function commit(mutator){
-    mutator(state);
-    render();
-    saveSession();
-    saveState();
+  /* ---------- notificacoes (admin) ---------- */
+  var NOTIF = { active: false, busy: false };
+  try{ NOTIF.active = localStorage.getItem('lavajato_notif_v1') === '1'; }catch(e){}
+
+  function ativarNotificacoesAdmin(){
+    return messagingIsSupported().then(function(supported){
+      if(!supported) return false;
+      if(!VAPID_KEY || VAPID_KEY === 'sua-vapid-key-aqui') return false;
+      return Notification.requestPermission().then(function(perm){
+        if(perm !== 'granted') return false;
+        return navigator.serviceWorker.ready.then(function(registration){
+          var messaging = getMessaging(fbApp);
+          return getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+        }).then(function(token){
+          if(!token) return false;
+          return updateDoc(CONFIG_REF, { adminTokens: arrayUnion(token) }).then(function(){ return true; });
+        });
+      });
+    }).catch(function(err){ console.error('Erro ao ativar notificacoes:', err); return false; });
   }
 
   /* ---------- rendering ---------- */
@@ -914,6 +992,14 @@
       '<div class="field"><label for="cfg-pin">PIN de acesso do painel</label><input type="text" id="cfg-pin" value="' + esc(state.adminPin) + '" required></div>' +
       '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Salvar</button></div>' +
     '</form></div>';
+    html += '<div class="card"><h2>Notificacoes</h2>';
+    html += '<p class="muted">Receba um aviso no celular sempre que um cliente marcar um agendamento novo.</p>';
+    if(NOTIF.active){
+      html += '<p style="color:var(--success);font-weight:600;margin:0;">Notificacoes ativadas neste aparelho.</p>';
+    } else {
+      html += '<button type="button" class="btn btn-primary" data-action="enable-notifications" ' + (NOTIF.busy?'disabled':'') + '>' + (NOTIF.busy?'Ativando...':'Ativar notificacoes') + '</button>';
+    }
+    html += '</div>';
     html += '<div class="card"><h2>Clientes cadastrados</h2>';
     if(state.clients.length===0){
       html += '<p class="muted">Nenhum cliente cadastrado ainda.</p>';
@@ -1033,8 +1119,7 @@
       SESSION.role = 'cliente';
       saveSession(); render();
     } else if(action === 'remove-car'){
-      commit(function(s){ s.cars = s.cars.filter(function(c){ return c.id!==id; }); });
-      toast('Carro removido.');
+      deleteDoc(doc(db,'cars', id)).then(function(){ toast('Carro removido.'); }).catch(function(){ toast('Erro ao remover carro.'); });
     } else if(action === 'toggle-service'){
       var b = SESSION.booking;
       var idx = b.serviceIds.indexOf(id);
@@ -1052,33 +1137,41 @@
       saveSession(); render();
     } else if(action === 'confirm-booking'){
       var b = SESSION.booking;
-      commit(function(s){
-        s.appointments.push({ id: uid(), clientId: SESSION.clientId, carId: b.carId, serviceIds: b.serviceIds.slice(),
-          date: b.date, time: b.time, status:'pendente', createdAt: Date.now() });
-      });
-      SESSION.booking = { serviceIds:[], carId:null, date:null, time:null };
-      SESSION.clientTab = 'meus-agendamentos';
-      saveSession(); render();
-      toast('Agendamento confirmado!');
+      var apptData = { clientId: SESSION.clientId, carId: b.carId, serviceIds: b.serviceIds.slice(),
+        date: b.date, time: b.time, status:'pendente', createdAt: Date.now() };
+      addDoc(COL.appointments, apptData).then(function(ref){
+        SESSION.booking = { serviceIds:[], carId:null, date:null, time:null };
+        SESSION.clientTab = 'meus-agendamentos';
+        saveSession(); render();
+        toast('Agendamento confirmado!');
+        fetch('/api/notify-new-booking', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ appointmentId: ref.id })
+        }).catch(function(){});
+      }).catch(function(){ toast('Nao foi possivel confirmar. Tente novamente.'); });
     } else if(action === 'client-cancel'){
-      commit(function(s){
-        var a = s.appointments.find(function(x){ return x.id===id; });
-        if(a) a.status = 'cancelado';
-      });
-      toast('Agendamento cancelado.');
+      updateDoc(doc(db,'appointments', id), { status:'cancelado' }).then(function(){ toast('Agendamento cancelado.'); }).catch(function(){ toast('Erro ao cancelar.'); });
     } else if(action === 'set-status'){
       var status = el.getAttribute('data-status');
-      commit(function(s){
-        var a = s.appointments.find(function(x){ return x.id===id; });
-        if(a) a.status = status;
-      });
-      toast('Status atualizado.');
+      updateDoc(doc(db,'appointments', id), { status: status }).then(function(){ toast('Status atualizado.'); }).catch(function(){ toast('Erro ao atualizar status.'); });
     } else if(action === 'remove-service'){
-      commit(function(s){ s.services = s.services.filter(function(x){ return x.id!==id; }); });
-      toast('Servico removido.');
+      deleteDoc(doc(db,'services', id)).then(function(){ toast('Servico removido.'); }).catch(function(){ toast('Erro ao remover servico.'); });
     } else if(action === 'unblock-date'){
       var ds = el.getAttribute('data-date');
-      commit(function(s){ s.availability.blockedDates = s.availability.blockedDates.filter(function(x){ return x!==ds; }); });
+      var remaining = state.availability.blockedDates.filter(function(x){ return x!==ds; });
+      updateDoc(CONFIG_REF, { 'availability.blockedDates': remaining }).catch(function(){ toast('Erro ao desbloquear data.'); });
+    } else if(action === 'enable-notifications'){
+      NOTIF.busy = true; render();
+      ativarNotificacoesAdmin().then(function(ok){
+        NOTIF.busy = false;
+        if(ok){
+          NOTIF.active = true;
+          try{ localStorage.setItem('lavajato_notif_v1', '1'); }catch(e){}
+          toast('Notificacoes ativadas!');
+        } else {
+          toast('Nao foi possivel ativar. Verifique as permissoes do navegador.');
+        }
+        render();
+      });
     } else if(action === 'install-android'){
       if(PWA.deferredPrompt){
         var promptEvent = PWA.deferredPrompt;
@@ -1107,10 +1200,10 @@
         SESSION.clientId = existing.id;
         saveSession(); render();
       } else {
-        var newClient = { id: uid(), name: nameVal, phone: phoneVal, createdAt: Date.now() };
-        commit(function(s){ s.clients.push(newClient); });
-        SESSION.clientId = newClient.id;
-        saveSession(); render();
+        addDoc(COL.clients, { name: nameVal, phone: phoneVal, createdAt: Date.now() }).then(function(ref){
+          SESSION.clientId = ref.id;
+          saveSession(); render();
+        }).catch(function(){ toast('Nao foi possivel continuar. Tente novamente.'); });
       }
     } else if(name === 'add-car'){
       var plate = form.querySelector('#car-plate').value.trim();
@@ -1120,8 +1213,8 @@
       var model = modelSel === CAR_MODEL_OTHER ? form.querySelector('#car-model-other').value.trim() : modelSel.trim();
       var color = form.querySelector('#car-color').value.trim();
       if(!plate || !model || !brand || !color){ toast('Preencha todos os campos do carro.'); return; }
-      commit(function(s){ s.cars.push({ id: uid(), clientId: SESSION.clientId, plate: plate, model: model, brand: brand, color: color }); });
-      toast('Carro cadastrado.');
+      addDoc(COL.cars, { clientId: SESSION.clientId, plate: plate, model: model, brand: brand, color: color })
+        .then(function(){ toast('Carro cadastrado.'); }).catch(function(){ toast('Erro ao cadastrar carro.'); });
     } else if(name === 'admin-login'){
       var pin = form.querySelector('#admin-pin').value.trim();
       if(pin === state.adminPin){
@@ -1136,32 +1229,33 @@
       var svDur = parseInt(form.querySelector('#sv-dur').value, 10);
       var svPrice = Math.round(parseFloat(form.querySelector('#sv-price').value) * 100);
       if(!svName || !svDur || isNaN(svPrice)){ toast('Preencha os dados do servico.'); return; }
-      commit(function(s){ s.services.push({ id: uid(), name: svName, description: svDesc, durationMin: svDur, priceCents: svPrice }); });
-      toast('Servico adicionado.');
+      addDoc(COL.services, { name: svName, description: svDesc, durationMin: svDur, priceCents: svPrice })
+        .then(function(){ toast('Servico adicionado.'); }).catch(function(){ toast('Erro ao adicionar servico.'); });
     } else if(name === 'save-availability'){
       var checked = Array.from(form.querySelectorAll('input[name="wd"]:checked')).map(function(i){ return parseInt(i.value,10); });
       var start = form.querySelector('#av-start').value.trim();
       var end = form.querySelector('#av-end').value.trim();
       var slot = parseInt(form.querySelector('#av-slot').value, 10);
       if(!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)){ toast('Use o formato HH:MM para os horarios.'); return; }
-      commit(function(s){ s.availability.workDays = checked; s.availability.startTime = start; s.availability.endTime = end; s.availability.slotMinutes = slot; });
-      toast('Horarios salvos.');
+      updateDoc(CONFIG_REF, { availability: { workDays:checked, startTime:start, endTime:end, slotMinutes:slot, blockedDates: state.availability.blockedDates } })
+        .then(function(){ toast('Horarios salvos.'); }).catch(function(){ toast('Erro ao salvar horarios.'); });
     } else if(name === 'block-date'){
       var ds = form.querySelector('#block-date-input').value;
       if(!ds){ return; }
-      commit(function(s){ if(s.availability.blockedDates.indexOf(ds)===-1) s.availability.blockedDates.push(ds); });
-      toast('Data bloqueada.');
+      updateDoc(CONFIG_REF, { 'availability.blockedDates': arrayUnion(ds) })
+        .then(function(){ toast('Data bloqueada.'); }).catch(function(){ toast('Erro ao bloquear data.'); });
     } else if(name === 'save-config'){
       var bn = form.querySelector('#cfg-name').value.trim();
       var pn = form.querySelector('#cfg-pin').value.trim();
       if(!bn || !pn){ toast('Preencha nome e PIN.'); return; }
-      commit(function(s){ s.businessName = bn; s.adminPin = pn; });
-      toast('Configuracoes salvas.');
+      updateDoc(CONFIG_REF, { businessName: bn, adminPin: pn })
+        .then(function(){ toast('Configuracoes salvas.'); }).catch(function(){ toast('Erro ao salvar configuracoes.'); });
     }
   }
 
   /* ---------- init ---------- */
   render();
+  bootFirebase();
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
