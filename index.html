@@ -177,16 +177,25 @@
   .service-card .price{ font-weight:600; color:var(--accent-strong); font-size:15px; }
   .service-card .dur{ color:var(--text-muted); font-size:12px; }
 
-  .day-scroll{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; }
-  .day-btn{
-    flex:0 0 auto; width:64px; padding:10px 4px; border-radius:10px; border:1px solid var(--border);
-    background:var(--surface-2); text-align:center; cursor:pointer;
+  .cal-head{ display:flex; align-items:center; justify-content:space-between; margin:12px 0 10px; }
+  .cal-title{ font-family:var(--font-display); font-size:16px; text-transform:uppercase; letter-spacing:0.02em; }
+  .cal-nav{
+    width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
   }
-  .day-btn .wd{ font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; }
-  .day-btn .num{ font-family:var(--font-display); font-size:20px; }
-  .day-btn.selected{ border-color:var(--accent); background:var(--accent); color:var(--accent-contrast); }
-  .day-btn.selected .wd{ color:var(--accent-contrast); opacity:0.85; }
-  .day-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .cal-nav:disabled{ opacity:0.3; cursor:not-allowed; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:16px; }
+  .cal-grid-head{ margin-bottom:2px; }
+  .cal-dow{ text-align:center; font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); padding:4px 0; }
+  .cal-cell{
+    aspect-ratio:1; border-radius:8px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:14px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
+  .cal-cell.is-today:not(.selected){ border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .cal-cell.selected{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); font-weight:700; }
+  .cal-cell:disabled{ opacity:0.3; cursor:not-allowed; }
 
   .slot-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
   .slot-btn{
@@ -389,6 +398,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   function todayStr(){ return toDateStr(new Date()); }
   var WEEKDAYS_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
   var WEEKDAYS_LONG = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+  var MONTH_NAMES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var CAR_BRANDS = [
     'Chevrolet','Fiat','Volkswagen','Ford','Hyundai','Toyota','Honda','Renault','Jeep',
     'Nissan','Peugeot','Citroen','Mitsubishi','Kia','BMW','Mercedes-Benz','Audi','Volvo',
@@ -740,6 +750,39 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     return html;
   }
 
+  function renderCalendar(b){
+    var today = new Date();
+    var todayStr = toDateStr(today);
+    var viewYear = b.calYear != null ? b.calYear : today.getFullYear();
+    var viewMonth = b.calMonth != null ? b.calMonth : today.getMonth();
+    var isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth());
+    var firstOfMonth = new Date(viewYear, viewMonth, 1);
+    var startWeekday = firstOfMonth.getDay();
+    var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    var html = '<div class="cal-head">' +
+      '<button type="button" class="cal-nav" data-action="cal-prev" ' + (isCurrentMonth?'disabled':'') + '>&lsaquo;</button>' +
+      '<span class="cal-title">' + MONTH_NAMES[viewMonth] + ' ' + viewYear + '</span>' +
+      '<button type="button" class="cal-nav" data-action="cal-next">&rsaquo;</button>' +
+    '</div>';
+
+    html += '<div class="cal-grid cal-grid-head">';
+    WEEKDAYS_SHORT.forEach(function(w){ html += '<div class="cal-dow">' + w + '</div>'; });
+    html += '</div>';
+
+    html += '<div class="cal-grid">';
+    for(var i=0;i<startWeekday;i++){ html += '<div class="cal-cell empty"></div>'; }
+    for(var day=1; day<=daysInMonth; day++){
+      var ds = toDateStr(new Date(viewYear, viewMonth, day));
+      var isPast = ds < todayStr;
+      var open = isDayOpen(ds) && !isPast;
+      var sel = b.date === ds;
+      html += '<button type="button" class="cal-cell ' + (sel?'selected':'') + (ds===todayStr?' is-today':'') + '" data-action="select-day" data-date="' + ds + '" ' + (open?'':'disabled') + '>' + day + '</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   function renderAgendar(client){
     var b = SESSION.booking;
     var step = b.step || 1;
@@ -790,17 +833,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     if(step === 3){
       var dur = totalDuration(b.serviceIds);
       html += '<div class="card">' + backBtn + '<h2>3. Escolha data e horario</h2>';
-      html += '<div class="day-scroll" style="margin:12px 0;">';
-      var today = new Date();
-      for(var i=0;i<21;i++){
-        var d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
-        var ds = toDateStr(d);
-        var open = isDayOpen(ds);
-        var sel = b.date === ds;
-        html += '<button type="button" class="day-btn ' + (sel?'selected':'') + '" data-action="select-day" data-date="' + ds + '" ' + (open?'':'disabled') + '>' +
-          '<div class="wd">' + WEEKDAYS_SHORT[d.getDay()] + '</div><div class="num">' + d.getDate() + '</div></button>';
-      }
-      html += '</div>';
+      html += renderCalendar(b);
       if(b.date){
         var slots = computeAvailableSlots(b.date, dur, null);
         if(slots.length===0){
@@ -1160,6 +1193,14 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     } else if(action === 'select-day'){
       SESSION.booking.date = el.getAttribute('data-date');
       SESSION.booking.time = null;
+      saveSession(); render();
+    } else if(action === 'cal-prev' || action === 'cal-next'){
+      var b2 = SESSION.booking;
+      var today2 = new Date();
+      var m = (b2.calMonth != null ? b2.calMonth : today2.getMonth()) + (action==='cal-next'?1:-1);
+      var y = (b2.calYear != null ? b2.calYear : today2.getFullYear());
+      if(m > 11){ m = 0; y++; } else if(m < 0){ m = 11; y--; }
+      b2.calMonth = m; b2.calYear = y;
       saveSession(); render();
     } else if(action === 'select-time'){
       SESSION.booking.time = el.getAttribute('data-time');
