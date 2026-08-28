@@ -7,8 +7,8 @@
 <title>Brilho Total</title>
 <meta name="description" content="Agendamento online de lavagem de carros.">
 
-<meta name="theme-color" content="#0E7C86">
-<meta name="background-color" content="#F4F7F6">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="background-color" content="#0A0A0A">
 
 <!-- iOS: comportamento de app em tela cheia -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -25,76 +25,30 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style id="app-style">
   :root{
-    --bg:#F4F7F6;
-    --surface:#FFFFFF;
-    --surface-2:#E7EFEE;
-    --surface-3:#DCE7E5;
-    --border:#D3DEDC;
-    --text:#12211F;
-    --text-muted:#57706C;
-    --accent:#0E7C86;
-    --accent-strong:#095A62;
-    --accent-soft:#DEF0EF;
-    --accent-contrast:#FFFFFF;
-    --success:#1E8E5A;
-    --success-bg:#E4F5EC;
-    --warning:#B4790E;
-    --warning-bg:#FBF0DA;
-    --danger:#C13B3B;
-    --danger-bg:#FBE6E6;
-    --neutral:#5A6C69;
-    --neutral-bg:#ECEFEE;
-    --shadow: 0 1px 2px rgba(18,33,31,0.06), 0 1px 1px rgba(18,33,31,0.04);
-    --radius: 10px;
+    --bg:#0A0A0A;
+    --surface:#161616;
+    --surface-2:#1F1F1F;
+    --surface-3:#2A2A2A;
+    --border:#302B1A;
+    --text:#F5F3EC;
+    --text-muted:#9A9689;
+    --accent:#FFD400;
+    --accent-strong:#FFE569;
+    --accent-soft:#2B2408;
+    --accent-contrast:#0A0A0A;
+    --success:#3ECF6E;
+    --success-bg:#132A1C;
+    --warning:#FF9F1C;
+    --warning-bg:#3A2408;
+    --danger:#FF5C5C;
+    --danger-bg:#331414;
+    --neutral:#9A9689;
+    --neutral-bg:#232323;
+    --shadow: 0 4px 14px rgba(0,0,0,0.5);
+    --radius: 12px;
     --font-display: 'Oswald', 'Arial Narrow', sans-serif;
     --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#0E1716;
-      --surface:#142321;
-      --surface-2:#1B2C2A;
-      --surface-3:#22423E;
-      --border:#28403C;
-      --text:#E8F2F0;
-      --text-muted:#93ABA7;
-      --accent:#2DD4C7;
-      --accent-strong:#57E6DA;
-      --accent-soft:#173230;
-      --accent-contrast:#08201E;
-      --success:#4ADE94;
-      --success-bg:#123526;
-      --warning:#F2B84B;
-      --warning-bg:#3A2C10;
-      --danger:#F27070;
-      --danger-bg:#3A1616;
-      --neutral:#93ABA7;
-      --neutral-bg:#1E2E2C;
-      --shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg:#0E1716;
-    --surface:#142321;
-    --surface-2:#1B2C2A;
-    --surface-3:#22423E;
-    --border:#28403C;
-    --text:#E8F2F0;
-    --text-muted:#93ABA7;
-    --accent:#2DD4C7;
-    --accent-strong:#57E6DA;
-    --accent-soft:#173230;
-    --accent-contrast:#08201E;
-    --success:#4ADE94;
-    --success-bg:#123526;
-    --warning:#F2B84B;
-    --warning-bg:#3A2C10;
-    --danger:#F27070;
-    --danger-bg:#3A1616;
-    --neutral:#93ABA7;
-    --neutral-bg:#1E2E2C;
-    --shadow: 0 1px 3px rgba(0,0,0,0.4);
   }
   *,*::before,*::after{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
