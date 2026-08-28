@@ -360,6 +360,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   }
 
   var SESSION = loadSession();
+  var justAddedCarId = null;
 
   function loadSession(){
     var def = { role:'cliente', clientId:null, adminAuthed:false, clientTab:'agendar', adminTab:'agenda', booking:{ serviceIds:[], carId:null, date:null, time:null, step:1 } };
@@ -699,11 +700,14 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     } else {
       html += '<div class="grid-2">';
       cars.forEach(function(c){
+        var justAdded = c.id === justAddedCarId;
         html += '<div class="card"><div class="card-row"><div>' +
           '<h3 style="text-transform:none;font-size:16px;">' + esc(c.model) + '</h3>' +
           '<p class="muted" style="margin:2px 0 6px;">' + esc(c.brand) + ' &middot; ' + esc(c.color) + '</p>' +
           '<span class="mono" style="font-size:14px;background:var(--surface-2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);">' + esc(c.plate.toUpperCase()) + '</span>' +
-          '</div><button class="btn btn-danger btn-sm" data-action="remove-car" data-id="' + c.id + '">Remover</button></div></div>';
+          '</div><button class="btn btn-danger btn-sm" data-action="remove-car" data-id="' + c.id + '">Remover</button></div>' +
+          (justAdded? '<button type="button" class="btn btn-primary btn-block" style="margin-top:12px;" data-action="goto-agendar-with-car" data-id="' + c.id + '">Agendar com esse carro</button>' : '') +
+        '</div>';
       });
       html += '</div>';
     }
@@ -1115,6 +1119,13 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       handleBrandSecretTap();
     } else if(action === 'client-tab'){
       SESSION.clientTab = el.getAttribute('data-tab');
+      justAddedCarId = null;
+      saveSession(); render();
+    } else if(action === 'goto-agendar-with-car'){
+      SESSION.booking.carId = id;
+      SESSION.booking.step = 1;
+      SESSION.clientTab = 'agendar';
+      justAddedCarId = null;
       saveSession(); render();
     } else if(action === 'admin-tab'){
       SESSION.adminTab = el.getAttribute('data-tab');
@@ -1136,7 +1147,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       saveSession(); render();
     } else if(action === 'booking-next'){
       if(SESSION.booking.serviceIds.length){
-        SESSION.booking.step = 2;
+        SESSION.booking.step = SESSION.booking.carId ? 3 : 2;
         saveSession(); render();
       }
     } else if(action === 'booking-back'){
@@ -1242,7 +1253,8 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       var color = form.querySelector('#car-color').value.trim();
       if(!plate || !model || !brand || !color){ toast('Preencha todos os campos do carro.'); return; }
       addDoc(COL.cars, { clientId: SESSION.clientId, plate: plate, model: model, brand: brand, color: color })
-        .then(function(){ toast('Carro cadastrado.'); }).catch(function(){ toast('Erro ao cadastrar carro.'); });
+        .then(function(ref){ justAddedCarId = ref.id; toast('Carro cadastrado.'); render(); })
+        .catch(function(){ toast('Erro ao cadastrar carro.'); });
     } else if(name === 'admin-login'){
       var pin = form.querySelector('#admin-pin').value.trim();
       if(pin === state.adminPin){
