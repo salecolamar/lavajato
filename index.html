@@ -1,0 +1,1185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Brilho Total</title>
+<meta name="description" content="Agendamento online de lavagem de carros.">
+
+<meta name="theme-color" content="#0E7C86">
+<meta name="background-color" content="#F4F7F6">
+
+<!-- iOS: comportamento de app em tela cheia -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Brilho Total">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+
+<!-- Android / geral -->
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style id="app-style">
+  :root{
+    --bg:#F4F7F6;
+    --surface:#FFFFFF;
+    --surface-2:#E7EFEE;
+    --surface-3:#DCE7E5;
+    --border:#D3DEDC;
+    --text:#12211F;
+    --text-muted:#57706C;
+    --accent:#0E7C86;
+    --accent-strong:#095A62;
+    --accent-soft:#DEF0EF;
+    --accent-contrast:#FFFFFF;
+    --success:#1E8E5A;
+    --success-bg:#E4F5EC;
+    --warning:#B4790E;
+    --warning-bg:#FBF0DA;
+    --danger:#C13B3B;
+    --danger-bg:#FBE6E6;
+    --neutral:#5A6C69;
+    --neutral-bg:#ECEFEE;
+    --shadow: 0 1px 2px rgba(18,33,31,0.06), 0 1px 1px rgba(18,33,31,0.04);
+    --radius: 10px;
+    --font-display: 'Oswald', 'Arial Narrow', sans-serif;
+    --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0E1716;
+      --surface:#142321;
+      --surface-2:#1B2C2A;
+      --surface-3:#22423E;
+      --border:#28403C;
+      --text:#E8F2F0;
+      --text-muted:#93ABA7;
+      --accent:#2DD4C7;
+      --accent-strong:#57E6DA;
+      --accent-soft:#173230;
+      --accent-contrast:#08201E;
+      --success:#4ADE94;
+      --success-bg:#123526;
+      --warning:#F2B84B;
+      --warning-bg:#3A2C10;
+      --danger:#F27070;
+      --danger-bg:#3A1616;
+      --neutral:#93ABA7;
+      --neutral-bg:#1E2E2C;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1716;
+    --surface:#142321;
+    --surface-2:#1B2C2A;
+    --surface-3:#22423E;
+    --border:#28403C;
+    --text:#E8F2F0;
+    --text-muted:#93ABA7;
+    --accent:#2DD4C7;
+    --accent-strong:#57E6DA;
+    --accent-soft:#173230;
+    --accent-contrast:#08201E;
+    --success:#4ADE94;
+    --success-bg:#123526;
+    --warning:#F2B84B;
+    --warning-bg:#3A2C10;
+    --danger:#F27070;
+    --danger-bg:#3A1616;
+    --neutral:#93ABA7;
+    --neutral-bg:#1E2E2C;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+  h1,h2,h3{
+    font-family:var(--font-display);
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    text-wrap:balance;
+    margin:0 0 4px 0;
+    color:var(--text);
+  }
+  p{ margin:0 0 0.6em 0; }
+  .muted{ color:var(--text-muted); }
+  a{ color:var(--accent); }
+  button{ font-family:inherit; }
+  input,select,textarea{ font-family:var(--font-body); }
+  ::selection{ background:var(--accent-soft); }
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-inner{
+    max-width:980px; margin:0 auto;
+    padding:14px 20px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px; border:none; padding:0; margin:0;
+    background:linear-gradient(160deg, var(--accent), var(--accent-strong));
+    display:flex; align-items:center; justify-content:center;
+    color:var(--accent-contrast); font-family:var(--font-display); font-weight:700; font-size:16px;
+    flex-shrink:0; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .brand-mark:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .brand-name{ font-family:var(--font-display); font-size:20px; font-weight:600; text-transform:uppercase; letter-spacing:0.02em; }
+  .brand-tag{ font-size:12px; color:var(--text-muted); margin-top:-2px; }
+
+  .container{ max-width:980px; margin:0 auto; padding:24px 20px 64px; }
+  .subnav{ display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:0; }
+  .subnav button{
+    border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+    padding:10px 4px; margin-right:18px; font-size:14px; font-weight:600;
+    border-bottom:2px solid transparent; position:relative; top:1px;
+  }
+  .subnav button.active{ color:var(--accent); border-bottom-color:var(--accent); }
+  .subnav button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .subnav-spacer{ flex:1; }
+  .subnav .ghost-link{ font-weight:500; color:var(--text-muted); }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; box-shadow:var(--shadow);
+  }
+  .card + .card{ margin-top:16px; }
+  .card-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .stack{ display:flex; flex-direction:column; gap:16px; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .grid-2{ grid-template-columns:1fr; } }
+
+  label{ display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:5px; }
+  .field{ margin-bottom:14px; }
+  input[type=text],input[type=tel],input[type=email],input[type=password],input[type=date],input[type=number],select,textarea{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); font-size:14px;
+  }
+  input:focus,select:focus,textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  .hint{ font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); }
+  .btn-primary:hover{ background:var(--accent-strong); border-color:var(--accent-strong); }
+  .btn-ghost{ background:transparent; border-color:transparent; color:var(--accent); padding:10px 8px; }
+  .btn-danger{ background:transparent; border-color:var(--danger); color:var(--danger); }
+  .btn-sm{ padding:6px 12px; font-size:13px; }
+  .btn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .btn-block{ width:100%; }
+
+  .pill{
+    display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px;
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;
+  }
+  .pill-pendente{ background:var(--warning-bg); color:var(--warning); }
+  .pill-confirmado{ background:var(--accent-soft); color:var(--accent-strong); }
+  .pill-concluido{ background:var(--success-bg); color:var(--success); }
+  .pill-cancelado{ background:var(--neutral-bg); color:var(--neutral); }
+
+  .mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+
+  .service-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .service-card{
+    border:1px solid var(--border); border-radius:var(--radius); padding:14px; background:var(--surface-2);
+    cursor:pointer; position:relative; text-align:left;
+  }
+  .service-card.selected{ border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 1px var(--accent) inset; }
+  .service-card h3{ font-size:15px; margin-bottom:2px; }
+  .service-card .desc{ font-size:12.5px; color:var(--text-muted); margin-bottom:10px; min-height:2.2em; }
+  .service-card .meta{ display:flex; justify-content:space-between; align-items:baseline; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  .service-card .price{ font-weight:600; color:var(--accent-strong); font-size:15px; }
+  .service-card .dur{ color:var(--text-muted); font-size:12px; }
+
+  .day-scroll{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; }
+  .day-btn{
+    flex:0 0 auto; width:64px; padding:10px 4px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface-2); text-align:center; cursor:pointer;
+  }
+  .day-btn .wd{ font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; }
+  .day-btn .num{ font-family:var(--font-display); font-size:20px; }
+  .day-btn.selected{ border-color:var(--accent); background:var(--accent); color:var(--accent-contrast); }
+  .day-btn.selected .wd{ color:var(--accent-contrast); opacity:0.85; }
+  .day-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .slot-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
+  .slot-btn{
+    padding:9px 4px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2);
+    font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:14px; cursor:pointer; text-align:center;
+  }
+  .slot-btn.selected{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); font-weight:600; }
+
+  .steps{ display:flex; gap:6px; margin-bottom:20px; }
+  .step{ flex:1; height:4px; border-radius:4px; background:var(--surface-3); }
+  .step.done{ background:var(--accent); }
+
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-muted); padding:8px 10px; border-bottom:1px solid var(--border); }
+  td{ padding:10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td{ border-bottom:none; }
+  .table-wrap{ overflow-x:auto; }
+
+  .empty{ text-align:center; padding:40px 16px; color:var(--text-muted); }
+  .empty .big{ font-size:32px; margin-bottom:8px; }
+
+  .toast-root{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:100; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .toast{ background:var(--text); color:var(--bg); padding:10px 18px; border-radius:8px; font-size:13.5px; box-shadow:var(--shadow); }
+
+  .stat-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:18px; }
+  .stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
+  .stat .n{ font-family:var(--font-display); font-size:26px; }
+  .stat .l{ font-size:11.5px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.03em; }
+
+  .badge-readonly{ background:var(--warning-bg); color:var(--warning); border-radius:8px; padding:8px 12px; font-size:13px; margin-bottom:16px; }
+  .weekday-check{ display:flex; gap:6px; flex-wrap:wrap; }
+  .weekday-check label{ display:flex; align-items:center; gap:6px; font-weight:500; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:7px 10px; cursor:pointer; }
+  .weekday-check input{ width:auto; }
+  .chip-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .chip{ display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:5px 10px 5px 12px; font-size:13px; }
+  .chip button{ border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px; line-height:1; padding:0; }
+
+  .install-row{ display:flex; gap:10px; margin-top:14px; }
+  .install-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--accent-soft); border:1px solid var(--accent); border-radius:8px;
+    padding:11px 10px; color:var(--accent-strong); font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .install-btn svg{ flex-shrink:0; }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  @media (min-width:640px){ .modal-overlay{ align-items:center; } }
+  .modal-box{
+    background:var(--surface); border-radius:16px 16px 0 0; padding:20px; width:100%; max-width:440px;
+    max-height:85vh; overflow-y:auto; box-shadow:var(--shadow);
+  }
+  @media (min-width:640px){ .modal-box{ border-radius:16px; } }
+  .modal-box .modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .modal-box h2{ margin:0; font-size:17px; }
+  .modal-close{ border:none; background:var(--surface-2); color:var(--text-muted); width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; }
+  .install-help ol{ padding-left:20px; margin:0 0 14px; }
+  .install-help li{ margin-bottom:4px; }
+  .install-help .fine{ font-size:11.5px; color:var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast-root" class="toast-root"></div>
+<script id="app-logic">
+(function(){
+  "use strict";
+
+  var STATE_KEY = 'lavajato_state_v1';
+  var SESSION_KEY = 'lavajato_session_v1';
+
+  function defaultState(){
+    return {
+      businessName: 'LAVA JATO',
+      adminPin: '1234',
+      services: [
+        { id:'s1', name:'Lavagem Simples', description:'Lavagem externa completa com secagem', durationMin:30, priceCents:3500 },
+        { id:'s2', name:'Lavagem Completa', description:'Externa e interna, painel e tapetes', durationMin:60, priceCents:6000 },
+        { id:'s3', name:'Lavagem + Cera', description:'Lavagem completa com aplicacao de cera protetora', durationMin:90, priceCents:9000 },
+        { id:'s4', name:'Higienizacao Interna', description:'Bancos, forracao e carpete', durationMin:75, priceCents:8000 },
+        { id:'s5', name:'Polimento', description:'Remocao de riscos leves e brilho na pintura', durationMin:120, priceCents:15000 }
+      ],
+      availability: { workDays:[1,2,3,4,5,6], startTime:'08:00', endTime:'18:00', slotMinutes:30, blockedDates:[] },
+      clients: [],
+      cars: [],
+      appointments: []
+    };
+  }
+
+  /* ---------- state ---------- */
+  var state = loadState();
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STATE_KEY);
+      if(!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      return Object.assign(defaultState(), parsed);
+    }catch(e){ return defaultState(); }
+  }
+  function saveState(){
+    try{ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  var SESSION = loadSession();
+
+  function loadSession(){
+    var def = { role:'cliente', clientId:null, adminAuthed:false, clientTab:'agendar', adminTab:'agenda', booking:{ serviceIds:[], carId:null, date:null, time:null } };
+    try{
+      var raw = sessionStorage.getItem(SESSION_KEY);
+      if(!raw) return def;
+      var parsed = JSON.parse(raw);
+      return Object.assign(def, parsed, { booking: Object.assign({}, def.booking, parsed.booking||{}) });
+    }catch(e){ return def; }
+  }
+  function saveSession(){
+    try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(SESSION)); }catch(e){}
+  }
+
+  /* ---------- utils ---------- */
+  function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function formatBRL(cents){
+    return 'R$ ' + (cents/100).toFixed(2).replace('.', ',');
+  }
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function toDateStr(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+  function todayStr(){ return toDateStr(new Date()); }
+  var WEEKDAYS_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+  var WEEKDAYS_LONG = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+  var CAR_BRANDS = [
+    'Chevrolet','Fiat','Volkswagen','Ford','Hyundai','Toyota','Honda','Renault','Jeep',
+    'Nissan','Peugeot','Citroen','Mitsubishi','Kia','BMW','Mercedes-Benz','Audi','Volvo',
+    'Land Rover','RAM','Chery','BYD','GWM','Caoa Chery','Subaru','Suzuki'
+  ];
+  var CAR_BRAND_OTHER = '__outra__';
+  var CAR_MODEL_OTHER = '__outro__';
+  var MODELS_BY_BRAND = {
+    'Chevrolet': ['Onix','Onix Plus','Tracker','Spin','S10','Montana','Equinox','Celta','Prisma','Cruze'],
+    'Fiat': ['Argo','Mobi','Cronos','Pulse','Toro','Strada','Uno','Palio','Fiorino','Fastback'],
+    'Volkswagen': ['Gol','Polo','Virtus','T-Cross','Nivus','Saveiro','Voyage','Fox','Jetta','Amarok'],
+    'Ford': ['Ka','EcoSport','Ranger','Fiesta','Focus','Territory','Bronco Sport'],
+    'Hyundai': ['HB20','HB20S','Creta','Tucson','i30','Santa Fe','Azera'],
+    'Toyota': ['Corolla','Corolla Cross','Hilux','Yaris','RAV4','Etios','SW4'],
+    'Honda': ['Civic','City','HR-V','Fit','WR-V','CR-V'],
+    'Renault': ['Kwid','Sandero','Logan','Duster','Captur','Oroch','Stepway'],
+    'Jeep': ['Renegade','Compass','Commander','Wrangler','Cherokee'],
+    'Nissan': ['Kicks','Versa','March','Frontier','Sentra'],
+    'Peugeot': ['208','2008','3008','408','308'],
+    'Citroen': ['C3','C4 Cactus','C4 Lounge','Aircross'],
+    'Mitsubishi': ['L200 Triton','ASX','Outlander','Pajero Sport','Eclipse Cross'],
+    'Kia': ['Sportage','Cerato','Sorento','Stonic','Soul'],
+    'BMW': ['Serie 1','Serie 2','Serie 3','X1','X3','X5'],
+    'Mercedes-Benz': ['Classe A','Classe C','Classe E','GLA','GLC'],
+    'Audi': ['A3','A4','A5','Q3','Q5'],
+    'Volvo': ['XC40','XC60','XC90','S60'],
+    'Land Rover': ['Range Rover Evoque','Discovery Sport','Defender','Range Rover Velar'],
+    'RAM': ['1500','2500','Rampage'],
+    'Chery': ['Tiggo 5x','Tiggo 7','Tiggo 8','Arrizo 6'],
+    'BYD': ['Dolphin','Song Plus','Yuan Plus','Seal'],
+    'GWM': ['Haval H6','Ora 03','Poer'],
+    'Caoa Chery': ['Tiggo 5x','Tiggo 7','Tiggo 8','Arrizo 6'],
+    'Subaru': ['Forester','Outback','XV','Impreza'],
+    'Suzuki': ['Vitara','Jimny','Swift']
+  };
+  function alphaCompare(a, b){ return a.localeCompare(b, 'pt-BR', { numeric:true, sensitivity:'base' }); }
+  CAR_BRANDS.sort(alphaCompare);
+  Object.keys(MODELS_BY_BRAND).forEach(function(brand){ MODELS_BY_BRAND[brand].sort(alphaCompare); });
+  function formatDateBR(dateStr){
+    var d = new Date(dateStr+'T00:00:00');
+    return pad2(d.getDate()) + '/' + pad2(d.getMonth()+1) + '/' + d.getFullYear() + ' (' + WEEKDAYS_SHORT[d.getDay()] + ')';
+  }
+  function timeToMin(t){ var p=t.split(':'); return (+p[0])*60 + (+p[1]); }
+  function minToTime(m){ return pad2(Math.floor(m/60)) + ':' + pad2(m%60); }
+  function onlyDigits(s){ return String(s||'').replace(/\D/g,''); }
+  function formatDuration(min){
+    if(min < 60) return min + ' min';
+    var h = Math.floor(min/60), m = min%60;
+    return h + 'h' + (m? ' ' + m + 'min' : '');
+  }
+
+  /* ---------- instalar no celular (PWA) ---------- */
+  var PWA = { deferredPrompt:null, isStandalone:false, isIOS:false, help:null };
+  (function initPWA(){
+    PWA.isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    var ua = window.navigator.userAgent || '';
+    PWA.isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
+    window.addEventListener('beforeinstallprompt', function(e){
+      e.preventDefault();
+      PWA.deferredPrompt = e;
+      render();
+    });
+    window.addEventListener('appinstalled', function(){
+      PWA.deferredPrompt = null;
+      PWA.isStandalone = true;
+      render();
+    });
+  })();
+
+  function renderInstallBanner(){
+    if(PWA.isStandalone) return '';
+    return (
+      '<div class="install-row">' +
+        '<button type="button" class="install-btn" data-action="install-android">&#128241; Baixar Android</button>' +
+        '<button type="button" class="install-btn" data-action="install-ios">&#128241; Baixar iPhone</button>' +
+      '</div>'
+    );
+  }
+
+  function renderInstallHelpModal(){
+    if(!PWA.help) return '';
+    if(PWA.help === 'android'){
+      return (
+        '<div class="modal-overlay">' +
+          '<div class="modal-box install-help">' +
+            '<div class="modal-head"><h2>Instalar no Android</h2><button type="button" class="modal-close" data-action="close-install-help">&times;</button></div>' +
+            '<p>No Android a instalacao e feita direto pelo Chrome:</p>' +
+            '<ol>' +
+              '<li>Toque nos <strong>tres pontinhos (&#8942;)</strong> no canto superior direito do Chrome.</li>' +
+              '<li>Escolha <strong>"Instalar app"</strong> ou <strong>"Adicionar a tela inicial"</strong>.</li>' +
+              '<li>Toque em <strong>"Instalar"</strong> para confirmar.</li>' +
+            '</ol>' +
+            '<p class="fine">Se o Chrome ja mostrou um aviso pra instalar sozinho, pode usar ele direto.</p>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="modal-overlay">' +
+        '<div class="modal-box install-help">' +
+          '<div class="modal-head"><h2>Adicionar a Tela de Inicio</h2><button type="button" class="modal-close" data-action="close-install-help">&times;</button></div>' +
+          '<p>No iPhone/iPad a instalacao e feita direto pelo Safari:</p>' +
+          '<ol>' +
+            '<li>Toque no icone de <strong>Compartilhar</strong> na barra do Safari.</li>' +
+            '<li>Escolha <strong>"Adicionar a Tela de Inicio"</strong>.</li>' +
+            '<li>Toque em <strong>"Adicionar"</strong>, no canto superior direito.</li>' +
+          '</ol>' +
+          '<p class="fine">Precisa ser pelo Safari &mdash; no iPhone, Chrome e outros navegadores nao tem essa opcao.</p>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function toast(msg){
+    var root = document.getElementById('toast-root');
+    if(!root) return;
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    root.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 3200);
+  }
+
+  /* ---------- domain helpers ---------- */
+  function findService(id){ return state.services.find(function(s){ return s.id===id; }); }
+  function findClient(id){ return state.clients.find(function(c){ return c.id===id; }); }
+  function findCar(id){ return state.cars.find(function(c){ return c.id===id; }); }
+  function clientCars(clientId){ return state.cars.filter(function(c){ return c.clientId===clientId; }); }
+  function clientAppointments(clientId){
+    return state.appointments.filter(function(a){ return a.clientId===clientId; })
+      .slice().sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+  }
+  function totalDuration(serviceIds){
+    return serviceIds.reduce(function(sum,id){ var s=findService(id); return sum + (s? s.durationMin : 0); }, 0);
+  }
+  function totalPrice(serviceIds){
+    return serviceIds.reduce(function(sum,id){ var s=findService(id); return sum + (s? s.priceCents : 0); }, 0);
+  }
+  function getBusyIntervals(dateStr, excludeId){
+    return state.appointments.filter(function(a){ return a.date===dateStr && a.status!=='cancelado' && a.id!==excludeId; })
+      .map(function(a){ var start=timeToMin(a.time); return [start, start+totalDuration(a.serviceIds)]; });
+  }
+  function computeAvailableSlots(dateStr, durationMin, excludeId){
+    var d = new Date(dateStr+'T00:00:00');
+    var weekday = d.getDay();
+    var av = state.availability;
+    if(av.workDays.indexOf(weekday) === -1) return [];
+    if(av.blockedDates.indexOf(dateStr) !== -1) return [];
+    var startMin = timeToMin(av.startTime);
+    var endMin = timeToMin(av.endTime);
+    var busy = getBusyIntervals(dateStr, excludeId);
+    var now = new Date();
+    var isToday = dateStr === toDateStr(now);
+    var nowMin = now.getHours()*60 + now.getMinutes();
+    var slots = [];
+    for(var t=startMin; t+durationMin<=endMin; t+=av.slotMinutes){
+      if(isToday && t <= nowMin) continue;
+      var overlaps = busy.some(function(iv){ return t < iv[1] && (t+durationMin) > iv[0]; });
+      if(!overlaps) slots.push(minToTime(t));
+    }
+    return slots;
+  }
+  function isDayOpen(dateStr){
+    var d = new Date(dateStr+'T00:00:00');
+    var av = state.availability;
+    return av.workDays.indexOf(d.getDay()) !== -1 && av.blockedDates.indexOf(dateStr) === -1;
+  }
+  function statusMeta(status){
+    return {
+      pendente:{ label:'Pendente' }, confirmado:{ label:'Confirmado' },
+      concluido:{ label:'Concluido' }, cancelado:{ label:'Cancelado' }
+    }[status] || { label:status };
+  }
+
+  /* ---------- persistence ---------- */
+  function commit(mutator){
+    mutator(state);
+    render();
+    saveSession();
+    saveState();
+  }
+
+  /* ---------- rendering ---------- */
+  function render(){
+    var app = document.getElementById('app');
+    if(!app) return;
+    app.innerHTML = renderApp();
+    attachOnce();
+  }
+
+  function renderApp(){
+    return (
+      '<div class="topbar"><div class="topbar-inner">' +
+        '<div class="brand">' +
+        '<button type="button" data-action="brand-secret-click" class="brand-mark" aria-label="' + esc(state.businessName) + '">LJ</button>' +
+        '<div><div class="brand-name">' + esc(state.businessName) + '</div>' +
+        '<div class="brand-tag">Agendamento online</div></div></div>' +
+      '</div></div>' +
+      '<div class="container">' +
+        (SESSION.role === 'admin' ? renderAdmin() : renderCliente()) +
+      '</div>' +
+      renderInstallHelpModal()
+    );
+  }
+
+  /* ----- cliente ----- */
+  function renderCliente(){
+    if(!SESSION.clientId || !findClient(SESSION.clientId)){
+      return renderIdentify();
+    }
+    var client = findClient(SESSION.clientId);
+    var tabs = [
+      ['agendar','Agendar'], ['meus-carros','Meus carros'], ['meus-agendamentos','Meus agendamentos']
+    ];
+    var html = '<div class="subnav">';
+    tabs.forEach(function(t){
+      html += '<button data-action="client-tab" data-tab="' + t[0] + '" class="' + (SESSION.clientTab===t[0]?'active':'') + '">' + t[1] + '</button>';
+    });
+    html += '<div class="subnav-spacer"></div>';
+    html += '<button data-action="client-logout" class="ghost-link">Ola, ' + esc(client.name.split(' ')[0]) + ' &middot; sair</button>';
+    html += '</div>';
+
+    if(SESSION.clientTab === 'meus-carros') html += renderMeusCarros(client);
+    else if(SESSION.clientTab === 'meus-agendamentos') html += renderMeusAgendamentos(client);
+    else html += renderAgendar(client);
+    return html;
+  }
+
+  function renderIdentify(){
+    return (
+      '<div class="card" style="max-width:420px;margin:24px auto;">' +
+        '<h2>Identifique-se</h2>' +
+        '<p class="muted">Informe seu nome e telefone para agendar um horario no ' + esc(state.businessName) + '.</p>' +
+        '<form data-form="identify" class="stack" style="gap:14px;margin-top:14px;">' +
+          '<div class="field"><label for="f-name">Nome completo</label><input type="text" id="f-name" required placeholder="Seu nome"></div>' +
+          '<div class="field"><label for="f-phone">Telefone / WhatsApp</label><input type="tel" id="f-phone" required placeholder="(11) 91234-5678"></div>' +
+          '<button type="submit" class="btn btn-primary btn-block">Continuar</button>' +
+        '</form>' +
+        renderInstallBanner() +
+      '</div>'
+    );
+  }
+
+  function renderMeusCarros(client){
+    var cars = clientCars(client.id);
+    var html = '<div class="stack">';
+    html += '<div class="card">';
+    html += '<h2>Adicionar carro</h2>';
+    var brandOptions = '<option value="" disabled selected>Selecione a marca</option>' +
+      CAR_BRANDS.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') +
+      '<option value="' + CAR_BRAND_OTHER + '">Outra marca...</option>';
+    html += '<form data-form="add-car" class="grid-2" style="margin-top:12px;">' +
+      '<div class="field"><label for="car-brand">Marca</label><select id="car-brand" required>' + brandOptions + '</select></div>' +
+      '<div class="field" id="car-brand-other-wrap" style="display:none;"><label for="car-brand-other">Qual marca?</label><input type="text" id="car-brand-other" placeholder="Digite a marca"></div>' +
+      '<div class="field"><label for="car-model">Modelo</label><select id="car-model" disabled><option value="" selected>Selecione a marca primeiro</option></select></div>' +
+      '<div class="field" id="car-model-other-wrap" style="display:none;"><label for="car-model-other">Qual modelo?</label><input type="text" id="car-model-other" placeholder="Digite o modelo"></div>' +
+      '<div class="field"><label for="car-plate">Placa</label><input type="text" id="car-plate" required placeholder="ABC1D23" style="text-transform:uppercase"></div>' +
+      '<div class="field"><label for="car-color">Cor</label><input type="text" id="car-color" required placeholder="Prata"></div>' +
+      '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Adicionar carro</button></div>' +
+    '</form></div>';
+
+    if(cars.length===0){
+      html += '<div class="card empty"><div class="big">&#128663;</div><p>Voce ainda nao cadastrou nenhum carro.</p></div>';
+    } else {
+      html += '<div class="grid-2">';
+      cars.forEach(function(c){
+        html += '<div class="card"><div class="card-row"><div>' +
+          '<h3 style="text-transform:none;font-size:16px;">' + esc(c.model) + '</h3>' +
+          '<p class="muted" style="margin:2px 0 6px;">' + esc(c.brand) + ' &middot; ' + esc(c.color) + '</p>' +
+          '<span class="mono" style="font-size:14px;background:var(--surface-2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);">' + esc(c.plate.toUpperCase()) + '</span>' +
+          '</div><button class="btn btn-danger btn-sm" data-action="remove-car" data-id="' + c.id + '">Remover</button></div></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderMeusAgendamentos(client){
+    var appts = clientAppointments(client.id);
+    if(appts.length===0){
+      return '<div class="card empty"><div class="big">&#128197;</div><p>Voce ainda nao tem agendamentos. Va em "Agendar" para marcar um horario.</p></div>';
+    }
+    var html = '<div class="stack">';
+    appts.forEach(function(a){
+      var car = findCar(a.carId);
+      var services = a.serviceIds.map(findService).filter(Boolean);
+      var canCancel = (a.status==='pendente' || a.status==='confirmado');
+      html += '<div class="card"><div class="card-row" style="align-items:flex-start;">' +
+        '<div>' +
+        '<div style="font-family:var(--font-display);font-size:16px;text-transform:uppercase;">' + formatDateBR(a.date) + ' &middot; <span class="mono">' + a.time + '</span></div>' +
+        '<p class="muted" style="margin:4px 0;">' + services.map(function(s){ return esc(s.name); }).join(', ') + '</p>' +
+        '<p style="margin:0;font-size:13px;">' + (car? esc(car.model) + ' - ' + esc(car.plate.toUpperCase()) : '&mdash;') + ' &middot; <span class="mono">' + formatBRL(totalPrice(a.serviceIds)) + '</span></p>' +
+        '</div>' +
+        '<div style="text-align:right;">' +
+        '<span class="pill pill-' + a.status + '">' + statusMeta(a.status).label + '</span>' +
+        (canCancel? '<div style="margin-top:8px;"><button class="btn btn-danger btn-sm" data-action="client-cancel" data-id="' + a.id + '">Cancelar</button></div>' : '') +
+        '</div></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderAgendar(client){
+    var b = SESSION.booking;
+    var cars = clientCars(client.id);
+    var html = '<div class="steps">' +
+      '<div class="step ' + (b.serviceIds.length?'done':'') + '"></div>' +
+      '<div class="step ' + (b.carId?'done':'') + '"></div>' +
+      '<div class="step ' + (b.date && b.time?'done':'') + '"></div>' +
+      '</div>';
+
+    html += '<div class="card"><h2>1. Escolha os servicos</h2><p class="muted">Voce pode selecionar mais de um.</p>';
+    html += '<div class="service-grid" style="margin-top:12px;">';
+    state.services.forEach(function(s){
+      var sel = b.serviceIds.indexOf(s.id) !== -1;
+      html += '<button type="button" class="service-card ' + (sel?'selected':'') + '" data-action="toggle-service" data-id="' + s.id + '">' +
+        '<h3>' + esc(s.name) + '</h3><div class="desc">' + esc(s.description) + '</div>' +
+        '<div class="meta"><span class="dur">' + formatDuration(s.durationMin) + '</span><span class="price">' + formatBRL(s.priceCents) + '</span></div>' +
+      '</button>';
+    });
+    html += '</div></div>';
+
+    if(b.serviceIds.length){
+      html += '<div class="card"><h2>2. Escolha o carro</h2>';
+      if(cars.length===0){
+        html += '<p class="muted">Voce ainda nao tem um carro cadastrado. <button class="btn btn-ghost" data-action="client-tab" data-tab="meus-carros">Cadastrar carro</button></p>';
+      } else {
+        html += '<div class="grid-2" style="margin-top:10px;">';
+        cars.forEach(function(c){
+          var sel = b.carId === c.id;
+          html += '<button type="button" class="service-card ' + (sel?'selected':'') + '" data-action="select-car" data-id="' + c.id + '" style="text-align:left;">' +
+            '<h3>' + esc(c.model) + '</h3><div class="desc">' + esc(c.brand) + ' &middot; ' + esc(c.color) + '</div>' +
+            '<span class="mono">' + esc(c.plate.toUpperCase()) + '</span></button>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+    if(b.serviceIds.length && b.carId){
+      var dur = totalDuration(b.serviceIds);
+      html += '<div class="card"><h2>3. Escolha data e horario</h2>';
+      html += '<div class="day-scroll" style="margin:12px 0;">';
+      var today = new Date();
+      for(var i=0;i<21;i++){
+        var d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
+        var ds = toDateStr(d);
+        var open = isDayOpen(ds);
+        var sel = b.date === ds;
+        html += '<button type="button" class="day-btn ' + (sel?'selected':'') + '" data-action="select-day" data-date="' + ds + '" ' + (open?'':'disabled') + '>' +
+          '<div class="wd">' + WEEKDAYS_SHORT[d.getDay()] + '</div><div class="num">' + d.getDate() + '</div></button>';
+      }
+      html += '</div>';
+      if(b.date){
+        var slots = computeAvailableSlots(b.date, dur, null);
+        if(slots.length===0){
+          html += '<p class="muted">Nenhum horario disponivel nesse dia para a duracao selecionada (' + formatDuration(dur) + '). Tente outra data.</p>';
+        } else {
+          html += '<div class="slot-grid">';
+          slots.forEach(function(t){
+            html += '<button type="button" class="slot-btn ' + (b.time===t?'selected':'') + '" data-action="select-time" data-time="' + t + '">' + t + '</button>';
+          });
+          html += '</div>';
+        }
+      }
+      html += '</div>';
+    }
+
+    if(b.serviceIds.length && b.carId && b.date && b.time){
+      var services = b.serviceIds.map(findService).filter(Boolean);
+      var car = findCar(b.carId);
+      html += '<div class="card"><h2>4. Confirmar</h2>';
+      html += '<p style="margin:8px 0;"><strong>' + formatDateBR(b.date) + ' as <span class="mono">' + b.time + '</span></strong></p>';
+      html += '<p class="muted" style="margin-bottom:4px;">' + services.map(function(s){ return esc(s.name); }).join(', ') + '</p>';
+      html += '<p class="muted" style="margin-bottom:4px;">' + esc(car.model) + ' - ' + esc(car.plate.toUpperCase()) + '</p>';
+      html += '<p style="font-size:18px;font-family:var(--font-display);margin:10px 0;">Total: <span class="mono">' + formatBRL(totalPrice(b.serviceIds)) + '</span> &middot; ' + formatDuration(totalDuration(b.serviceIds)) + '</p>';
+      html += '<button class="btn btn-primary" data-action="confirm-booking">Confirmar agendamento</button>';
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  /* ----- admin ----- */
+  function renderAdmin(){
+    if(!SESSION.adminAuthed){
+      return (
+        '<div class="card" style="max-width:360px;margin:24px auto;">' +
+          '<button type="button" data-action="admin-cancel" class="btn-ghost" style="padding:0;margin-bottom:12px;font-size:13px;">&lsaquo; Voltar</button>' +
+          '<h2>Acesso do lava jato</h2>' +
+          '<p class="muted">Digite o PIN de acesso do painel administrativo.</p>' +
+          '<form data-form="admin-login" class="stack" style="gap:14px;margin-top:14px;">' +
+            '<div class="field"><label for="admin-pin">PIN</label><input type="password" id="admin-pin" required inputmode="numeric" placeholder="****"></div>' +
+            '<button type="submit" class="btn btn-primary btn-block">Entrar</button>' +
+          '</form>' +
+          '<p class="hint" style="margin-top:10px;">PIN padrao: 1234 (altere em Configuracoes apos entrar).</p>' +
+          renderInstallBanner() +
+        '</div>'
+      );
+    }
+    var tabs = [['agenda','Agenda de hoje'],['servicos','Servicos'],['horarios','Horarios'],['agendamentos','Agendamentos'],['config','Configuracoes']];
+    var html = '<div class="subnav">';
+    tabs.forEach(function(t){
+      html += '<button data-action="admin-tab" data-tab="' + t[0] + '" class="' + (SESSION.adminTab===t[0]?'active':'') + '">' + t[1] + '</button>';
+    });
+    html += '<div class="subnav-spacer"></div><button data-action="admin-logout" class="ghost-link">Sair do painel</button></div>';
+
+    if(SESSION.adminTab==='servicos') html += renderAdminServicos();
+    else if(SESSION.adminTab==='horarios') html += renderAdminHorarios();
+    else if(SESSION.adminTab==='agendamentos') html += renderAdminAgendamentos();
+    else if(SESSION.adminTab==='config') html += renderAdminConfig();
+    else html += renderAdminAgenda();
+    return html;
+  }
+
+  function renderAdminAgenda(){
+    var today = todayStr();
+    var todays = state.appointments.filter(function(a){ return a.date===today; })
+      .slice().sort(function(a,b){ return a.time.localeCompare(b.time); });
+    var counts = { pendente:0, confirmado:0, concluido:0, cancelado:0 };
+    todays.forEach(function(a){ counts[a.status] = (counts[a.status]||0)+1; });
+
+    var html = '<div class="stat-row">' +
+      '<div class="stat"><div class="n">' + todays.length + '</div><div class="l">Hoje</div></div>' +
+      '<div class="stat"><div class="n">' + counts.pendente + '</div><div class="l">Pendentes</div></div>' +
+      '<div class="stat"><div class="n">' + counts.confirmado + '</div><div class="l">Confirmados</div></div>' +
+      '<div class="stat"><div class="n">' + counts.concluido + '</div><div class="l">Concluidos</div></div>' +
+    '</div>';
+
+    html += '<div class="card"><h2>' + formatDateBR(today) + '</h2>';
+    if(todays.length===0){
+      html += '<div class="empty"><div class="big">&#9728;</div><p>Nenhum agendamento para hoje.</p></div>';
+    } else {
+      html += '<div class="stack" style="margin-top:12px;">';
+      todays.forEach(function(a){ html += renderApptRow(a, true); });
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderApptRow(a, compact){
+    var client = findClient(a.clientId);
+    var car = findCar(a.carId);
+    var services = a.serviceIds.map(findService).filter(Boolean);
+    var html = '<div class="card" style="padding:14px;"><div class="card-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px;">';
+    html += '<div>';
+    html += '<div class="mono" style="font-size:16px;font-weight:600;">' + a.time + (compact? '' : ' &middot; ' + formatDateBR(a.date)) + '</div>';
+    html += '<div style="margin:2px 0;">' + esc(client? client.name : 'Cliente removido') + (client? ' &middot; ' + esc(client.phone) : '') + '</div>';
+    html += '<div class="muted" style="font-size:13px;">' + (car? esc(car.model) + ' - ' + esc(car.plate.toUpperCase()) : '&mdash;') + '</div>';
+    html += '<div class="muted" style="font-size:13px;">' + services.map(function(s){return esc(s.name);}).join(', ') + ' &middot; <span class="mono">' + formatBRL(totalPrice(a.serviceIds)) + '</span></div>';
+    html += '</div>';
+    html += '<div style="text-align:right;">';
+    html += '<span class="pill pill-' + a.status + '">' + statusMeta(a.status).label + '</span>';
+    html += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">';
+    if(a.status==='pendente') html += '<button class="btn btn-sm btn-primary" data-action="set-status" data-id="' + a.id + '" data-status="confirmado">Confirmar</button>';
+    if(a.status==='confirmado') html += '<button class="btn btn-sm btn-primary" data-action="set-status" data-id="' + a.id + '" data-status="concluido">Concluir</button>';
+    if(a.status!=='cancelado' && a.status!=='concluido') html += '<button class="btn btn-sm btn-danger" data-action="set-status" data-id="' + a.id + '" data-status="cancelado">Cancelar</button>';
+    html += '</div></div></div></div>';
+    return html;
+  }
+
+  function renderAdminServicos(){
+    var html = '<div class="card"><h2>Novo servico</h2>';
+    html += '<form data-form="add-service" class="grid-2" style="margin-top:12px;">' +
+      '<div class="field"><label for="sv-name">Nome</label><input type="text" id="sv-name" required></div>' +
+      '<div class="field"><label for="sv-dur">Duracao (minutos)</label><input type="number" id="sv-dur" required min="5" step="5" value="30"></div>' +
+      '<div class="field" style="grid-column:1/-1"><label for="sv-desc">Descricao</label><input type="text" id="sv-desc" placeholder="Opcional"></div>' +
+      '<div class="field"><label for="sv-price">Preco (R$)</label><input type="number" id="sv-price" required min="0" step="0.01" value="0"></div>' +
+      '<div style="align-self:end;"><button type="submit" class="btn btn-primary">Adicionar servico</button></div>' +
+    '</form></div>';
+
+    html += '<div class="stack">';
+    state.services.forEach(function(s){
+      html += '<div class="card"><div class="card-row"><div>' +
+        '<h3 style="text-transform:none;font-size:16px;">' + esc(s.name) + '</h3>' +
+        '<p class="muted" style="margin:2px 0;">' + esc(s.description||'') + '</p>' +
+        '<p class="mono" style="margin:0;">' + formatDuration(s.durationMin) + ' &middot; ' + formatBRL(s.priceCents) + '</p>' +
+        '</div><button class="btn btn-danger btn-sm" data-action="remove-service" data-id="' + s.id + '">Remover</button></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderAdminHorarios(){
+    var av = state.availability;
+    var html = '<div class="card"><h2>Dias e horario de funcionamento</h2>';
+    html += '<form data-form="save-availability" style="margin-top:14px;">';
+    html += '<div class="field"><label>Dias abertos</label><div class="weekday-check">';
+    WEEKDAYS_LONG.forEach(function(name, idx){
+      html += '<label><input type="checkbox" name="wd" value="' + idx + '" ' + (av.workDays.indexOf(idx)!==-1?'checked':'') + '>' + name + '</label>';
+    });
+    html += '</div></div>';
+    html += '<div class="grid-2">' +
+      '<div class="field"><label for="av-start">Abre as</label><input type="text" id="av-start" value="' + av.startTime + '" placeholder="08:00"></div>' +
+      '<div class="field"><label for="av-end">Fecha as</label><input type="text" id="av-end" value="' + av.endTime + '" placeholder="18:00"></div>' +
+      '<div class="field"><label for="av-slot">Intervalo entre horarios (minutos)</label><select id="av-slot">' +
+        [15,20,30,45,60].map(function(m){ return '<option value="' + m + '" ' + (av.slotMinutes===m?'selected':'') + '>' + m + ' min</option>'; }).join('') +
+      '</select></div>' +
+    '</div>';
+    html += '<button type="submit" class="btn btn-primary">Salvar horarios</button>';
+    html += '</form></div>';
+
+    html += '<div class="card"><h2>Bloquear datas (feriados, folgas)</h2>';
+    html += '<form data-form="block-date" style="margin-top:12px;display:flex;gap:10px;align-items:end;flex-wrap:wrap;">' +
+      '<div class="field" style="margin-bottom:0;"><label for="block-date-input">Data</label><input type="date" id="block-date-input" required></div>' +
+      '<button type="submit" class="btn btn-primary">Bloquear</button>' +
+    '</form>';
+    if(av.blockedDates.length){
+      html += '<div class="chip-list">';
+      av.blockedDates.slice().sort().forEach(function(ds){
+        html += '<span class="chip">' + formatDateBR(ds) + '<button data-action="unblock-date" data-date="' + ds + '">&times;</button></span>';
+      });
+      html += '</div>';
+    } else {
+      html += '<p class="muted" style="margin-top:10px;">Nenhuma data bloqueada.</p>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderAdminAgendamentos(){
+    var filter = SESSION.apptFilter || 'todos';
+    var list = state.appointments.slice().sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+    if(filter !== 'todos') list = list.filter(function(a){ return a.status===filter; });
+
+    var html = '<div class="card"><div class="card-row" style="flex-wrap:wrap;gap:10px;">';
+    html += '<h2 style="margin:0;">Todos os agendamentos</h2>';
+    html += '<select data-action="filter-status" style="width:auto;">';
+    [['todos','Todos'],['pendente','Pendentes'],['confirmado','Confirmados'],['concluido','Concluidos'],['cancelado','Cancelados']].forEach(function(o){
+      html += '<option value="' + o[0] + '" ' + (filter===o[0]?'selected':'') + '>' + o[1] + '</option>';
+    });
+    html += '</select></div></div>';
+
+    if(list.length===0){
+      html += '<div class="card empty"><p>Nenhum agendamento encontrado.</p></div>';
+    } else {
+      html += '<div class="stack" style="margin-top:12px;">';
+      list.forEach(function(a){ html += renderApptRow(a, false); });
+      html += '</div>';
+    }
+    return html;
+  }
+
+  function renderAdminConfig(){
+    var html = '<div class="card"><h2>Dados do negocio</h2>';
+    html += '<form data-form="save-config" class="grid-2" style="margin-top:12px;">' +
+      '<div class="field"><label for="cfg-name">Nome do lava jato</label><input type="text" id="cfg-name" value="' + esc(state.businessName) + '" required></div>' +
+      '<div class="field"><label for="cfg-pin">PIN de acesso do painel</label><input type="text" id="cfg-pin" value="' + esc(state.adminPin) + '" required></div>' +
+      '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Salvar</button></div>' +
+    '</form></div>';
+    html += '<div class="card"><h2>Clientes cadastrados</h2>';
+    if(state.clients.length===0){
+      html += '<p class="muted">Nenhum cliente cadastrado ainda.</p>';
+    } else {
+      html += '<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>Carros</th></tr></thead><tbody>';
+      state.clients.forEach(function(c){
+        var n = clientCars(c.id).length;
+        html += '<tr><td>' + esc(c.name) + '</td><td class="mono">' + esc(c.phone) + '</td><td>' + n + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /* ---------- dependent model <select> (marca -> modelo) ---------- */
+  function toggleModelOther(show){
+    var wrap = document.getElementById('car-model-other-wrap');
+    if(!wrap) return;
+    wrap.style.display = show ? '' : 'none';
+    if(show){
+      var otherInput = document.getElementById('car-model-other');
+      if(otherInput) otherInput.focus();
+    }
+  }
+  function populateModelSelect(brand){
+    var sel = document.getElementById('car-model');
+    if(!sel) return;
+    var models = MODELS_BY_BRAND[brand];
+    if(!models){
+      sel.innerHTML = '<option value="' + CAR_MODEL_OTHER + '" selected>Digite o modelo ao lado</option>';
+      sel.disabled = true;
+      toggleModelOther(true);
+      return;
+    }
+    sel.disabled = false;
+    var opts = '<option value="" disabled selected>Selecione o modelo</option>' +
+      models.map(function(m){ return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('') +
+      '<option value="' + CAR_MODEL_OTHER + '">Outro modelo...</option>';
+    sel.innerHTML = opts;
+    toggleModelOther(false);
+  }
+
+  /* ---------- events ---------- */
+  var ATTACHED = false;
+  function attachOnce(){
+    if(ATTACHED) return;
+    ATTACHED = true;
+    var app = document.getElementById('app');
+
+    app.addEventListener('click', function(ev){
+      if(ev.target.classList && ev.target.classList.contains('modal-overlay')){
+        PWA.help = null; render(); return;
+      }
+      var el = ev.target.closest('[data-action]');
+      if(!el) return;
+      var action = el.getAttribute('data-action');
+      handleAction(action, el, ev);
+    });
+
+    app.addEventListener('change', function(ev){
+      if(ev.target.matches('select[data-action="filter-status"]')){
+        SESSION.apptFilter = ev.target.value;
+        saveSession();
+        render();
+      } else if(ev.target.id === 'car-brand'){
+        var wrap = document.getElementById('car-brand-other-wrap');
+        var isOther = ev.target.value === CAR_BRAND_OTHER;
+        if(wrap){
+          wrap.style.display = isOther ? '' : 'none';
+          if(isOther) document.getElementById('car-brand-other').focus();
+        }
+        populateModelSelect(ev.target.value);
+      } else if(ev.target.id === 'car-model'){
+        toggleModelOther(ev.target.value === CAR_MODEL_OTHER);
+      }
+    });
+
+    app.addEventListener('submit', function(ev){
+      var form = ev.target.closest('form[data-form]');
+      if(!form) return;
+      ev.preventDefault();
+      handleForm(form.getAttribute('data-form'), form);
+    });
+  }
+
+  var SECRET_TAP_WINDOW_MS = 2000;
+  var SECRET_TAPS_NEEDED = 5;
+  var secretTapTimes = [];
+  function handleBrandSecretTap(){
+    var now = Date.now();
+    secretTapTimes = secretTapTimes.filter(function(t){ return now - t < SECRET_TAP_WINDOW_MS; });
+    secretTapTimes.push(now);
+    if(secretTapTimes.length >= SECRET_TAPS_NEEDED){
+      secretTapTimes = [];
+      SESSION.role = 'admin';
+      saveSession(); render();
+    }
+  }
+
+  function handleAction(action, el){
+    var id = el.getAttribute('data-id');
+    if(action === 'brand-secret-click'){
+      handleBrandSecretTap();
+    } else if(action === 'client-tab'){
+      SESSION.clientTab = el.getAttribute('data-tab');
+      saveSession(); render();
+    } else if(action === 'admin-tab'){
+      SESSION.adminTab = el.getAttribute('data-tab');
+      saveSession(); render();
+    } else if(action === 'client-logout'){
+      SESSION.clientId = null;
+      SESSION.booking = { serviceIds:[], carId:null, date:null, time:null };
+      saveSession(); render();
+    } else if(action === 'admin-logout' || action === 'admin-cancel'){
+      SESSION.adminAuthed = false;
+      SESSION.role = 'cliente';
+      saveSession(); render();
+    } else if(action === 'remove-car'){
+      commit(function(s){ s.cars = s.cars.filter(function(c){ return c.id!==id; }); });
+      toast('Carro removido.');
+    } else if(action === 'toggle-service'){
+      var b = SESSION.booking;
+      var idx = b.serviceIds.indexOf(id);
+      if(idx===-1) b.serviceIds.push(id); else b.serviceIds.splice(idx,1);
+      saveSession(); render();
+    } else if(action === 'select-car'){
+      SESSION.booking.carId = id;
+      saveSession(); render();
+    } else if(action === 'select-day'){
+      SESSION.booking.date = el.getAttribute('data-date');
+      SESSION.booking.time = null;
+      saveSession(); render();
+    } else if(action === 'select-time'){
+      SESSION.booking.time = el.getAttribute('data-time');
+      saveSession(); render();
+    } else if(action === 'confirm-booking'){
+      var b = SESSION.booking;
+      commit(function(s){
+        s.appointments.push({ id: uid(), clientId: SESSION.clientId, carId: b.carId, serviceIds: b.serviceIds.slice(),
+          date: b.date, time: b.time, status:'pendente', createdAt: Date.now() });
+      });
+      SESSION.booking = { serviceIds:[], carId:null, date:null, time:null };
+      SESSION.clientTab = 'meus-agendamentos';
+      saveSession(); render();
+      toast('Agendamento confirmado!');
+    } else if(action === 'client-cancel'){
+      commit(function(s){
+        var a = s.appointments.find(function(x){ return x.id===id; });
+        if(a) a.status = 'cancelado';
+      });
+      toast('Agendamento cancelado.');
+    } else if(action === 'set-status'){
+      var status = el.getAttribute('data-status');
+      commit(function(s){
+        var a = s.appointments.find(function(x){ return x.id===id; });
+        if(a) a.status = status;
+      });
+      toast('Status atualizado.');
+    } else if(action === 'remove-service'){
+      commit(function(s){ s.services = s.services.filter(function(x){ return x.id!==id; }); });
+      toast('Servico removido.');
+    } else if(action === 'unblock-date'){
+      var ds = el.getAttribute('data-date');
+      commit(function(s){ s.availability.blockedDates = s.availability.blockedDates.filter(function(x){ return x!==ds; }); });
+    } else if(action === 'install-android'){
+      if(PWA.deferredPrompt){
+        var promptEvent = PWA.deferredPrompt;
+        PWA.deferredPrompt = null;
+        promptEvent.prompt();
+        promptEvent.userChoice.catch(function(){}).then(function(choice){
+          if(!choice || choice.outcome !== 'accepted'){ PWA.help = 'android'; render(); }
+        });
+      } else {
+        PWA.help = 'android'; render();
+      }
+    } else if(action === 'install-ios'){
+      PWA.help = 'ios'; render();
+    } else if(action === 'close-install-help'){
+      PWA.help = null; render();
+    }
+  }
+
+  function handleForm(name, form){
+    if(name === 'identify'){
+      var nameVal = form.querySelector('#f-name').value.trim();
+      var phoneVal = onlyDigits(form.querySelector('#f-phone').value);
+      if(!nameVal || !phoneVal){ toast('Preencha nome e telefone.'); return; }
+      var existing = state.clients.find(function(c){ return c.phone === phoneVal; });
+      if(existing){
+        SESSION.clientId = existing.id;
+        saveSession(); render();
+      } else {
+        var newClient = { id: uid(), name: nameVal, phone: phoneVal, createdAt: Date.now() };
+        commit(function(s){ s.clients.push(newClient); });
+        SESSION.clientId = newClient.id;
+        saveSession(); render();
+      }
+    } else if(name === 'add-car'){
+      var plate = form.querySelector('#car-plate').value.trim();
+      var brandSel = form.querySelector('#car-brand').value;
+      var brand = brandSel === CAR_BRAND_OTHER ? form.querySelector('#car-brand-other').value.trim() : brandSel;
+      var modelSel = form.querySelector('#car-model').value;
+      var model = modelSel === CAR_MODEL_OTHER ? form.querySelector('#car-model-other').value.trim() : modelSel.trim();
+      var color = form.querySelector('#car-color').value.trim();
+      if(!plate || !model || !brand || !color){ toast('Preencha todos os campos do carro.'); return; }
+      commit(function(s){ s.cars.push({ id: uid(), clientId: SESSION.clientId, plate: plate, model: model, brand: brand, color: color }); });
+      toast('Carro cadastrado.');
+    } else if(name === 'admin-login'){
+      var pin = form.querySelector('#admin-pin').value.trim();
+      if(pin === state.adminPin){
+        SESSION.adminAuthed = true;
+        saveSession(); render();
+      } else {
+        toast('PIN incorreto.');
+      }
+    } else if(name === 'add-service'){
+      var svName = form.querySelector('#sv-name').value.trim();
+      var svDesc = form.querySelector('#sv-desc').value.trim();
+      var svDur = parseInt(form.querySelector('#sv-dur').value, 10);
+      var svPrice = Math.round(parseFloat(form.querySelector('#sv-price').value) * 100);
+      if(!svName || !svDur || isNaN(svPrice)){ toast('Preencha os dados do servico.'); return; }
+      commit(function(s){ s.services.push({ id: uid(), name: svName, description: svDesc, durationMin: svDur, priceCents: svPrice }); });
+      toast('Servico adicionado.');
+    } else if(name === 'save-availability'){
+      var checked = Array.from(form.querySelectorAll('input[name="wd"]:checked')).map(function(i){ return parseInt(i.value,10); });
+      var start = form.querySelector('#av-start').value.trim();
+      var end = form.querySelector('#av-end').value.trim();
+      var slot = parseInt(form.querySelector('#av-slot').value, 10);
+      if(!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)){ toast('Use o formato HH:MM para os horarios.'); return; }
+      commit(function(s){ s.availability.workDays = checked; s.availability.startTime = start; s.availability.endTime = end; s.availability.slotMinutes = slot; });
+      toast('Horarios salvos.');
+    } else if(name === 'block-date'){
+      var ds = form.querySelector('#block-date-input').value;
+      if(!ds){ return; }
+      commit(function(s){ if(s.availability.blockedDates.indexOf(ds)===-1) s.availability.blockedDates.push(ds); });
+      toast('Data bloqueada.');
+    } else if(name === 'save-config'){
+      var bn = form.querySelector('#cfg-name').value.trim();
+      var pn = form.querySelector('#cfg-pin').value.trim();
+      if(!bn || !pn){ toast('Preencha nome e PIN.'); return; }
+      commit(function(s){ s.businessName = bn; s.adminPin = pn; });
+      toast('Configuracoes salvas.');
+    }
+  }
+
+  /* ---------- init ---------- */
+  render();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('/sw.js').then(function(registration){
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState === 'visible') registration.update();
+        });
+      }).catch(function(){});
+
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if(refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
