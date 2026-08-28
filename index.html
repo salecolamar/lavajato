@@ -199,8 +199,15 @@
   }
   .pill-pendente{ background:var(--warning-bg); color:var(--warning); }
   .pill-confirmado{ background:var(--accent-soft); color:var(--accent-strong); }
+  .pill-pronto{ background:var(--success); color:#fff; font-size:13px; padding:6px 14px; box-shadow:var(--shadow); }
   .pill-concluido{ background:var(--success-bg); color:var(--success); }
   .pill-cancelado{ background:var(--neutral-bg); color:var(--neutral); }
+
+  .alert-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    background:var(--warning-bg); color:var(--warning); border:1px solid var(--warning);
+    border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; font-weight:600; font-size:14px;
+  }
 
   .mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
 
@@ -596,9 +603,28 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   }
   function statusMeta(status){
     return {
-      pendente:{ label:'Pendente' }, confirmado:{ label:'Confirmado' },
+      pendente:{ label:'Pendente' }, confirmado:{ label:'Confirmado' }, pronto:{ label:'Esta pronto!' },
       concluido:{ label:'Concluido' }, cancelado:{ label:'Cancelado' }
     }[status] || { label:status };
+  }
+
+  function pendingCount(){
+    return state.appointments.filter(function(a){ return a.status==='pendente'; }).length;
+  }
+
+  /* ---------- notificacoes: pede permissao + token FCM e salva em algum lugar ---------- */
+  function pedirTokenPush(){
+    return messagingIsSupported().then(function(supported){
+      if(!supported) return null;
+      if(!VAPID_KEY || VAPID_KEY === 'sua-vapid-key-aqui') return null;
+      return Notification.requestPermission().then(function(perm){
+        if(perm !== 'granted') return null;
+        return navigator.serviceWorker.ready.then(function(registration){
+          var messaging = getMessaging(fbApp);
+          return getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+        });
+      });
+    }).catch(function(err){ console.error('Erro ao pedir permissao de notificacao:', err); return null; });
   }
 
   /* ---------- notificacoes (admin) ---------- */
@@ -606,20 +632,21 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   try{ NOTIF.active = localStorage.getItem('lavajato_notif_v1') === '1'; }catch(e){}
 
   function ativarNotificacoesAdmin(){
-    return messagingIsSupported().then(function(supported){
-      if(!supported) return false;
-      if(!VAPID_KEY || VAPID_KEY === 'sua-vapid-key-aqui') return false;
-      return Notification.requestPermission().then(function(perm){
-        if(perm !== 'granted') return false;
-        return navigator.serviceWorker.ready.then(function(registration){
-          var messaging = getMessaging(fbApp);
-          return getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
-        }).then(function(token){
-          if(!token) return false;
-          return updateDoc(CONFIG_REF, { adminTokens: arrayUnion(token) }).then(function(){ return true; });
-        });
-      });
-    }).catch(function(err){ console.error('Erro ao ativar notificacoes:', err); return false; });
+    return pedirTokenPush().then(function(token){
+      if(!token) return false;
+      return updateDoc(CONFIG_REF, { adminTokens: arrayUnion(token) }).then(function(){ return true; });
+    });
+  }
+
+  /* ---------- notificacoes (cliente) ---------- */
+  var CNOTIF = { active: false, busy: false };
+  try{ CNOTIF.active = localStorage.getItem('lavajato_notif_cliente_v1') === '1'; }catch(e){}
+
+  function ativarNotificacoesCliente(){
+    return pedirTokenPush().then(function(token){
+      if(!token || !SESSION.clientId) return false;
+      return updateDoc(doc(db,'clients', SESSION.clientId), { pushTokens: arrayUnion(token) }).then(function(){ return true; });
+    });
   }
 
   /* ---------- rendering ---------- */
@@ -718,16 +745,29 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     return html;
   }
 
+  function renderClientNotifBanner(){
+    if(CNOTIF.active) return '';
+    return (
+      '<div class="card" style="margin-bottom:16px;">' +
+        '<div class="card-row" style="flex-wrap:wrap;gap:10px;">' +
+          '<span class="muted" style="font-size:13.5px;">Receba um aviso quando o lava jato aceitar seu horario ou seu carro ficar pronto.</span>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-action="enable-notifications-cliente" ' + (CNOTIF.busy?'disabled':'') + '>' + (CNOTIF.busy?'Ativando...':'Ativar avisos') + '</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function renderMeusAgendamentos(client){
     var appts = clientAppointments(client.id);
+    var banner = renderClientNotifBanner();
     if(appts.length===0){
-      return '<div class="card empty"><div class="big">&#128197;</div><p>Voce ainda nao tem agendamentos. Va em "Agendar" para marcar um horario.</p></div>';
+      return banner + '<div class="card empty"><div class="big">&#128197;</div><p>Voce ainda nao tem agendamentos. Va em "Agendar" para marcar um horario.</p></div>';
     }
-    var html = '<div class="stack">';
+    var html = banner + '<div class="stack">';
     appts.forEach(function(a){
       var car = findCar(a.carId);
       var services = a.serviceIds.map(findService).filter(Boolean);
-      var canCancel = (a.status==='pendente' || a.status==='confirmado');
+      var canCancel = (a.status!=='concluido' && a.status!=='cancelado');
       html += '<div class="card"><div class="card-row" style="align-items:flex-start;">' +
         '<div>' +
         '<div style="font-family:var(--font-display);font-size:16px;text-transform:uppercase;">' + formatDateBR(a.date) + ' &middot; <span class="mono">' + a.time + '</span></div>' +
@@ -848,6 +888,12 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     });
     html += '<div class="subnav-spacer"></div><button data-action="admin-logout" class="ghost-link">Sair do painel</button></div>';
 
+    var pending = pendingCount();
+    if(pending > 0){
+      html += '<div class="alert-banner"><span>&#128276; Voce tem ' + pending + ' agendamento' + (pending>1?'s':'') + ' pendente' + (pending>1?'s':'') + ' aguardando aceite.</span>' +
+        '<button type="button" class="btn btn-primary btn-sm" data-action="admin-tab" data-tab="agenda">Ver agora</button></div>';
+    }
+
     if(SESSION.adminTab==='servicos') html += renderAdminServicos();
     else if(SESSION.adminTab==='horarios') html += renderAdminHorarios();
     else if(SESSION.adminTab==='agendamentos') html += renderAdminAgendamentos();
@@ -860,13 +906,14 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     var today = todayStr();
     var todays = state.appointments.filter(function(a){ return a.date===today; })
       .slice().sort(function(a,b){ return a.time.localeCompare(b.time); });
-    var counts = { pendente:0, confirmado:0, concluido:0, cancelado:0 };
+    var counts = { pendente:0, confirmado:0, pronto:0, concluido:0, cancelado:0 };
     todays.forEach(function(a){ counts[a.status] = (counts[a.status]||0)+1; });
 
     var html = '<div class="stat-row">' +
       '<div class="stat"><div class="n">' + todays.length + '</div><div class="l">Hoje</div></div>' +
       '<div class="stat"><div class="n">' + counts.pendente + '</div><div class="l">Pendentes</div></div>' +
       '<div class="stat"><div class="n">' + counts.confirmado + '</div><div class="l">Confirmados</div></div>' +
+      '<div class="stat"><div class="n">' + counts.pronto + '</div><div class="l">Prontos</div></div>' +
       '<div class="stat"><div class="n">' + counts.concluido + '</div><div class="l">Concluidos</div></div>' +
     '</div>';
 
@@ -897,7 +944,8 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     html += '<span class="pill pill-' + a.status + '">' + statusMeta(a.status).label + '</span>';
     html += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">';
     if(a.status==='pendente') html += '<button class="btn btn-sm btn-primary" data-action="set-status" data-id="' + a.id + '" data-status="confirmado">Confirmar</button>';
-    if(a.status==='confirmado') html += '<button class="btn btn-sm btn-primary" data-action="set-status" data-id="' + a.id + '" data-status="concluido">Concluir</button>';
+    if(a.status==='confirmado') html += '<button class="btn btn-sm btn-primary" data-action="set-status" data-id="' + a.id + '" data-status="pronto">Esta pronto</button>';
+    if(a.status==='pronto') html += '<button class="btn btn-sm btn-primary" data-action="set-status" data-id="' + a.id + '" data-status="concluido">Concluir</button>';
     if(a.status!=='cancelado' && a.status!=='concluido') html += '<button class="btn btn-sm btn-danger" data-action="set-status" data-id="' + a.id + '" data-status="cancelado">Cancelar</button>';
     html += '</div></div></div></div>';
     return html;
@@ -970,7 +1018,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     var html = '<div class="card"><div class="card-row" style="flex-wrap:wrap;gap:10px;">';
     html += '<h2 style="margin:0;">Todos os agendamentos</h2>';
     html += '<select data-action="filter-status" style="width:auto;">';
-    [['todos','Todos'],['pendente','Pendentes'],['confirmado','Confirmados'],['concluido','Concluidos'],['cancelado','Cancelados']].forEach(function(o){
+    [['todos','Todos'],['pendente','Pendentes'],['confirmado','Confirmados'],['pronto','Prontos'],['concluido','Concluidos'],['cancelado','Cancelados']].forEach(function(o){
       html += '<option value="' + o[0] + '" ' + (filter===o[0]?'selected':'') + '>' + o[1] + '</option>';
     });
     html += '</select></div></div>';
@@ -1152,7 +1200,14 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       updateDoc(doc(db,'appointments', id), { status:'cancelado' }).then(function(){ toast('Agendamento cancelado.'); }).catch(function(){ toast('Erro ao cancelar.'); });
     } else if(action === 'set-status'){
       var status = el.getAttribute('data-status');
-      updateDoc(doc(db,'appointments', id), { status: status }).then(function(){ toast('Status atualizado.'); }).catch(function(){ toast('Erro ao atualizar status.'); });
+      updateDoc(doc(db,'appointments', id), { status: status }).then(function(){
+        toast('Status atualizado.');
+        if(status === 'confirmado' || status === 'pronto'){
+          fetch('/api/notify-status-change', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ appointmentId: id })
+          }).catch(function(){});
+        }
+      }).catch(function(){ toast('Erro ao atualizar status.'); });
     } else if(action === 'remove-service'){
       deleteDoc(doc(db,'services', id)).then(function(){ toast('Servico removido.'); }).catch(function(){ toast('Erro ao remover servico.'); });
     } else if(action === 'unblock-date'){
@@ -1167,6 +1222,19 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
           NOTIF.active = true;
           try{ localStorage.setItem('lavajato_notif_v1', '1'); }catch(e){}
           toast('Notificacoes ativadas!');
+        } else {
+          toast('Nao foi possivel ativar. Verifique as permissoes do navegador.');
+        }
+        render();
+      });
+    } else if(action === 'enable-notifications-cliente'){
+      CNOTIF.busy = true; render();
+      ativarNotificacoesCliente().then(function(ok){
+        CNOTIF.busy = false;
+        if(ok){
+          CNOTIF.active = true;
+          try{ localStorage.setItem('lavajato_notif_cliente_v1', '1'); }catch(e){}
+          toast('Avisos ativados!');
         } else {
           toast('Nao foi possivel ativar. Verifique as permissoes do navegador.');
         }
@@ -1220,6 +1288,10 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       if(pin === state.adminPin){
         SESSION.adminAuthed = true;
         saveSession(); render();
+        var pending = pendingCount();
+        if(pending > 0){
+          toast('Voce tem ' + pending + ' agendamento' + (pending>1?'s':'') + ' pendente' + (pending>1?'s':'') + ' para aceitar!');
+        }
       } else {
         toast('PIN incorreto.');
       }
