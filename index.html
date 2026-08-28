@@ -408,7 +408,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   var SESSION = loadSession();
 
   function loadSession(){
-    var def = { role:'cliente', clientId:null, adminAuthed:false, clientTab:'agendar', adminTab:'agenda', booking:{ serviceIds:[], carId:null, date:null, time:null } };
+    var def = { role:'cliente', clientId:null, adminAuthed:false, clientTab:'agendar', adminTab:'agenda', booking:{ serviceIds:[], carId:null, date:null, time:null, step:1 } };
     try{
       var raw = sessionStorage.getItem(SESSION_KEY);
       if(!raw) return def;
@@ -784,26 +784,35 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
 
   function renderAgendar(client){
     var b = SESSION.booking;
+    var step = b.step || 1;
     var cars = clientCars(client.id);
+    var backBtn = '<button type="button" class="btn-ghost" style="padding:0;margin-bottom:12px;font-size:13px;" data-action="booking-back">&lsaquo; Voltar</button>';
+
     var html = '<div class="steps">' +
-      '<div class="step ' + (b.serviceIds.length?'done':'') + '"></div>' +
-      '<div class="step ' + (b.carId?'done':'') + '"></div>' +
-      '<div class="step ' + (b.date && b.time?'done':'') + '"></div>' +
+      '<div class="step ' + (step>1?'done':'') + '"></div>' +
+      '<div class="step ' + (step>2?'done':'') + '"></div>' +
+      '<div class="step ' + (step>3?'done':'') + '"></div>' +
+      '<div class="step ' + (step>4?'done':'') + '"></div>' +
       '</div>';
 
-    html += '<div class="card"><h2>1. Escolha os servicos</h2><p class="muted">Voce pode selecionar mais de um.</p>';
-    html += '<div class="service-grid" style="margin-top:12px;">';
-    state.services.forEach(function(s){
-      var sel = b.serviceIds.indexOf(s.id) !== -1;
-      html += '<button type="button" class="service-card ' + (sel?'selected':'') + '" data-action="toggle-service" data-id="' + s.id + '">' +
-        '<h3>' + esc(s.name) + '</h3><div class="desc">' + esc(s.description) + '</div>' +
-        '<div class="meta"><span class="dur">' + formatDuration(s.durationMin) + '</span><span class="price">' + formatBRL(s.priceCents) + '</span></div>' +
-      '</button>';
-    });
-    html += '</div></div>';
+    if(step === 1){
+      html += '<div class="card"><h2>1. Escolha os servicos</h2><p class="muted">Voce pode selecionar mais de um.</p>';
+      html += '<div class="service-grid" style="margin-top:12px;">';
+      state.services.forEach(function(s){
+        var sel = b.serviceIds.indexOf(s.id) !== -1;
+        html += '<button type="button" class="service-card ' + (sel?'selected':'') + '" data-action="toggle-service" data-id="' + s.id + '">' +
+          '<h3>' + esc(s.name) + '</h3><div class="desc">' + esc(s.description) + '</div>' +
+          '<div class="meta"><span class="dur">' + formatDuration(s.durationMin) + '</span><span class="price">' + formatBRL(s.priceCents) + '</span></div>' +
+        '</button>';
+      });
+      html += '</div>';
+      html += '<button type="button" class="btn btn-primary" style="margin-top:16px;" data-action="booking-next" ' + (b.serviceIds.length?'':'disabled') + '>Continuar</button>';
+      html += '</div>';
+      return html;
+    }
 
-    if(b.serviceIds.length){
-      html += '<div class="card"><h2>2. Escolha o carro</h2>';
+    if(step === 2){
+      html += '<div class="card">' + backBtn + '<h2>2. Escolha o carro</h2>';
       if(cars.length===0){
         html += '<p class="muted">Voce ainda nao tem um carro cadastrado. <button class="btn btn-ghost" data-action="client-tab" data-tab="meus-carros">Cadastrar carro</button></p>';
       } else {
@@ -817,11 +826,12 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
         html += '</div>';
       }
       html += '</div>';
+      return html;
     }
 
-    if(b.serviceIds.length && b.carId){
+    if(step === 3){
       var dur = totalDuration(b.serviceIds);
-      html += '<div class="card"><h2>3. Escolha data e horario</h2>';
+      html += '<div class="card">' + backBtn + '<h2>3. Escolha data e horario</h2>';
       html += '<div class="day-scroll" style="margin:12px 0;">';
       var today = new Date();
       for(var i=0;i<21;i++){
@@ -846,20 +856,18 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
         }
       }
       html += '</div>';
+      return html;
     }
 
-    if(b.serviceIds.length && b.carId && b.date && b.time){
-      var services = b.serviceIds.map(findService).filter(Boolean);
-      var car = findCar(b.carId);
-      html += '<div class="card"><h2>4. Confirmar</h2>';
-      html += '<p style="margin:8px 0;"><strong>' + formatDateBR(b.date) + ' as <span class="mono">' + b.time + '</span></strong></p>';
-      html += '<p class="muted" style="margin-bottom:4px;">' + services.map(function(s){ return esc(s.name); }).join(', ') + '</p>';
-      html += '<p class="muted" style="margin-bottom:4px;">' + esc(car.model) + ' - ' + esc(car.plate.toUpperCase()) + '</p>';
-      html += '<p style="font-size:18px;font-family:var(--font-display);margin:10px 0;">Total: <span class="mono">' + formatBRL(totalPrice(b.serviceIds)) + '</span> &middot; ' + formatDuration(totalDuration(b.serviceIds)) + '</p>';
-      html += '<button class="btn btn-primary" data-action="confirm-booking">Confirmar agendamento</button>';
-      html += '</div>';
-    }
-
+    var services = b.serviceIds.map(findService).filter(Boolean);
+    var car = findCar(b.carId);
+    html += '<div class="card">' + backBtn + '<h2>4. Confirmar</h2>';
+    html += '<p style="margin:8px 0;"><strong>' + formatDateBR(b.date) + ' as <span class="mono">' + b.time + '</span></strong></p>';
+    html += '<p class="muted" style="margin-bottom:4px;">' + services.map(function(s){ return esc(s.name); }).join(', ') + '</p>';
+    html += '<p class="muted" style="margin-bottom:4px;">' + (car? esc(car.model) + ' - ' + esc(car.plate.toUpperCase()) : '') + '</p>';
+    html += '<p style="font-size:18px;font-family:var(--font-display);margin:10px 0;">Total: <span class="mono">' + formatBRL(totalPrice(b.serviceIds)) + '</span> &middot; ' + formatDuration(totalDuration(b.serviceIds)) + '</p>';
+    html += '<button class="btn btn-primary" data-action="confirm-booking">Confirmar agendamento</button>';
+    html += '</div>';
     return html;
   }
 
@@ -1159,7 +1167,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       saveSession(); render();
     } else if(action === 'client-logout'){
       SESSION.clientId = null;
-      SESSION.booking = { serviceIds:[], carId:null, date:null, time:null };
+      SESSION.booking = { serviceIds:[], carId:null, date:null, time:null, step:1 };
       saveSession(); render();
     } else if(action === 'admin-logout' || action === 'admin-cancel'){
       SESSION.adminAuthed = false;
@@ -1172,8 +1180,17 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       var idx = b.serviceIds.indexOf(id);
       if(idx===-1) b.serviceIds.push(id); else b.serviceIds.splice(idx,1);
       saveSession(); render();
+    } else if(action === 'booking-next'){
+      if(SESSION.booking.serviceIds.length){
+        SESSION.booking.step = 2;
+        saveSession(); render();
+      }
+    } else if(action === 'booking-back'){
+      SESSION.booking.step = Math.max(1, (SESSION.booking.step||1) - 1);
+      saveSession(); render();
     } else if(action === 'select-car'){
       SESSION.booking.carId = id;
+      SESSION.booking.step = 3;
       saveSession(); render();
     } else if(action === 'select-day'){
       SESSION.booking.date = el.getAttribute('data-date');
@@ -1181,13 +1198,14 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       saveSession(); render();
     } else if(action === 'select-time'){
       SESSION.booking.time = el.getAttribute('data-time');
+      SESSION.booking.step = 4;
       saveSession(); render();
     } else if(action === 'confirm-booking'){
       var b = SESSION.booking;
       var apptData = { clientId: SESSION.clientId, carId: b.carId, serviceIds: b.serviceIds.slice(),
         date: b.date, time: b.time, status:'pendente', createdAt: Date.now() };
       addDoc(COL.appointments, apptData).then(function(ref){
-        SESSION.booking = { serviceIds:[], carId:null, date:null, time:null };
+        SESSION.booking = { serviceIds:[], carId:null, date:null, time:null, step:1 };
         SESSION.clientTab = 'meus-agendamentos';
         saveSession(); render();
         toast('Agendamento confirmado!');
