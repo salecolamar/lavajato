@@ -490,10 +490,6 @@ import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported 
     if(d.length <= 10) return '(' + d.slice(0,2) + ') ' + d.slice(2,6) + '-' + d.slice(6);
     return '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7);
   }
-  function maskPlate(v){
-    return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,7);
-  }
-  var PLATE_RE = /^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
   var MIN_CANCEL_HOURS = 2;
   var BOOKING_WINDOW_DAYS = 60;
   function hoursUntilAppt(appt){
@@ -822,7 +818,7 @@ import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported 
       '<div class="field" id="car-brand-other-wrap" style="display:none;"><label for="car-brand-other">Qual marca?</label><input type="text" id="car-brand-other" placeholder="Digite a marca"></div>' +
       '<div class="field"><label for="car-model">Modelo</label><select id="car-model" disabled><option value="" selected>Selecione a marca primeiro</option></select></div>' +
       '<div class="field" id="car-model-other-wrap" style="display:none;"><label for="car-model-other">Qual modelo?</label><input type="text" id="car-model-other" placeholder="Digite o modelo"></div>' +
-      '<div class="field"><label for="car-plate">Placa</label><input type="text" id="car-plate" required placeholder="ABC1D23" maxlength="7" style="text-transform:uppercase"></div>' +
+      '<div class="field"><label for="car-plate">Placa</label><input type="text" id="car-plate" required placeholder="ABC1D23" style="text-transform:uppercase"></div>' +
       '<div class="field"><label for="car-color">Cor</label><input type="text" id="car-color" required placeholder="Prata"></div>' +
       '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Adicionar carro</button></div>' +
     '</form>';
@@ -1315,8 +1311,6 @@ import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported 
     app.addEventListener('input', function(ev){
       if(ev.target.id === 'f-phone'){
         ev.target.value = maskPhone(ev.target.value);
-      } else if(ev.target.id === 'car-plate'){
-        ev.target.value = maskPlate(ev.target.value);
       }
     });
 
@@ -1543,15 +1537,14 @@ import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported 
         }).catch(function(){ toast('Nao foi possivel continuar. Tente novamente.'); });
       }
     } else if(name === 'add-car'){
-      var plate = maskPlate(form.querySelector('#car-plate').value);
+      var plate = form.querySelector('#car-plate').value.trim();
       var brandSel = form.querySelector('#car-brand').value;
       var brand = brandSel === CAR_BRAND_OTHER ? form.querySelector('#car-brand-other').value.trim() : brandSel;
       var modelSel = form.querySelector('#car-model').value;
       var model = modelSel === CAR_MODEL_OTHER ? form.querySelector('#car-model-other').value.trim() : modelSel.trim();
       var color = form.querySelector('#car-color').value.trim();
       if(!plate || !model || !brand || !color){ toast('Preencha todos os campos do carro.'); return; }
-      if(!PLATE_RE.test(plate)){ toast('Placa invalida. Use o formato ABC1D23.'); return; }
-      var dupPlate = state.cars.some(function(c){ return c.plate.toUpperCase() === plate; });
+      var dupPlate = state.cars.some(function(c){ return c.plate.trim().toUpperCase() === plate.toUpperCase(); });
       if(dupPlate){ toast('Essa placa ja esta cadastrada.'); return; }
       addDoc(COL.cars, { clientId: SESSION.clientId, plate: plate, model: model, brand: brand, color: color })
         .then(function(ref){
