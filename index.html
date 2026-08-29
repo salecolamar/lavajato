@@ -151,7 +151,7 @@
     display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px;
     font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;
   }
-  .pill-pendente{ background:var(--warning-bg); color:var(--warning); }
+  .pill-pendente{ background:var(--warning); color:#1a1200; font-size:13px; padding:6px 14px; font-weight:800; }
   .pill-confirmado{ background:var(--accent-soft); color:var(--accent-strong); }
   .pill-pronto{ background:var(--success); color:#fff; font-size:13px; padding:6px 14px; box-shadow:var(--shadow); }
   .pill-concluido{ background:var(--success-bg); color:var(--success); }
@@ -194,8 +194,17 @@
   }
   .cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
   .cal-cell.is-today:not(.selected){ border-color:var(--accent); color:var(--accent); font-weight:700; }
-  .cal-cell.selected{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); font-weight:700; }
   .cal-cell:disabled{ opacity:0.3; cursor:not-allowed; }
+  .cal-cell.is-closed{ opacity:0.3; }
+  .cal-cell.is-blocked{ background:var(--danger-bg); border-color:var(--danger); color:var(--danger); opacity:0.75; }
+  .cal-cell.is-full{ background:var(--warning-bg); border-color:var(--warning); color:var(--warning); opacity:0.85; }
+  .cal-cell.selected{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); font-weight:700; opacity:1; }
+  .cal-legend{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; font-size:11px; color:var(--text-muted); }
+  .cal-legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .cal-legend i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .cal-shortcuts{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .slot-section-title{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-muted); margin:14px 0 8px; }
+  .slot-section-title:first-of-type{ margin-top:4px; }
 
   .slot-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
   .slot-btn{
@@ -204,9 +213,19 @@
   }
   .slot-btn.selected{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); font-weight:600; }
 
-  .steps{ display:flex; gap:6px; margin-bottom:20px; }
-  .step{ flex:1; height:4px; border-radius:4px; background:var(--surface-3); }
-  .step.done{ background:var(--accent); }
+  .steps{ display:flex; gap:6px; margin-bottom:16px; }
+  .step-item{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .step-dot{ width:100%; height:4px; border-radius:4px; background:var(--surface-3); }
+  .step-item.done .step-dot{ background:var(--accent); }
+  .step-item.active .step-dot{ background:var(--accent-strong); box-shadow:0 0 0 3px var(--accent-soft); }
+  .step-label{ font-size:10px; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-muted); text-align:center; }
+  .step-item.done .step-label{ color:var(--text); }
+  .step-item.active .step-label{ color:var(--accent); font-weight:700; }
+  .booking-summary{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:10px 14px; margin-bottom:16px; font-size:13px;
+  }
 
   table{ width:100%; border-collapse:collapse; font-size:13.5px; }
   th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-muted); padding:8px 10px; border-bottom:1px solid var(--border); }
@@ -309,6 +328,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   var state = {
     businessName: 'LAVA JATO',
     adminPin: '1234',
+    whatsappNumber: '',
     services: [],
     availability: defaultAvailability(),
     clients: [],
@@ -354,6 +374,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
         var c = snap.data() || {};
         state.businessName = c.businessName || 'LAVA JATO';
         state.adminPin = c.adminPin || '1234';
+        state.whatsappNumber = c.whatsappNumber || '';
         state.availability = c.availability || defaultAvailability();
         state.adminTokens = c.adminTokens || [];
         render();
@@ -368,20 +389,31 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     });
   }
 
+  var CLIENT_ID_KEY = 'lavajato_client_id_v1';
   var SESSION = loadSession();
-  var justAddedCarId = null;
 
   function loadSession(){
     var def = { role:'cliente', clientId:null, adminAuthed:false, clientTab:'agendar', adminTab:'agenda', booking:{ serviceIds:[], carId:null, date:null, time:null, step:1 } };
+    var savedClientId = null;
+    try{ savedClientId = localStorage.getItem(CLIENT_ID_KEY); }catch(e){}
+    var merged;
     try{
       var raw = sessionStorage.getItem(SESSION_KEY);
-      if(!raw) return def;
-      var parsed = JSON.parse(raw);
-      return Object.assign(def, parsed, { booking: Object.assign({}, def.booking, parsed.booking||{}) });
-    }catch(e){ return def; }
+      if(!raw){ merged = def; }
+      else{
+        var parsed = JSON.parse(raw);
+        merged = Object.assign(def, parsed, { booking: Object.assign({}, def.booking, parsed.booking||{}) });
+      }
+    }catch(e){ merged = def; }
+    if(!merged.clientId && savedClientId) merged.clientId = savedClientId;
+    return merged;
   }
   function saveSession(){
     try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(SESSION)); }catch(e){}
+    try{
+      if(SESSION.clientId) localStorage.setItem(CLIENT_ID_KEY, SESSION.clientId);
+      else localStorage.removeItem(CLIENT_ID_KEY);
+    }catch(e){}
   }
 
   /* ---------- utils ---------- */
@@ -449,6 +481,35 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     var h = Math.floor(min/60), m = min%60;
     return h + 'h' + (m? ' ' + m + 'min' : '');
   }
+  function maskPhone(v){
+    var d = onlyDigits(v).slice(0,11);
+    if(!d.length) return '';
+    if(d.length <= 2) return '(' + d;
+    if(d.length <= 6) return '(' + d.slice(0,2) + ') ' + d.slice(2);
+    if(d.length <= 10) return '(' + d.slice(0,2) + ') ' + d.slice(2,6) + '-' + d.slice(6);
+    return '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7);
+  }
+  function maskPlate(v){
+    return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,7);
+  }
+  var PLATE_RE = /^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
+  var MIN_CANCEL_HOURS = 2;
+  var BOOKING_WINDOW_DAYS = 60;
+  function hoursUntilAppt(appt){
+    try{
+      var dt = new Date(appt.date + 'T' + appt.time + ':00');
+      return (dt.getTime() - Date.now()) / 3600000;
+    }catch(e){ return null; }
+  }
+  function findNextAvailableDate(dur){
+    var start = new Date();
+    for(var i=0;i<BOOKING_WINDOW_DAYS;i++){
+      var cand = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i);
+      var ds = toDateStr(cand);
+      if(isDayOpen(ds) && computeAvailableSlots(ds, dur, null).length>0) return ds;
+    }
+    return null;
+  }
 
   /* ---------- instalar no celular (PWA) ---------- */
   var PWA = { deferredPrompt:null, isStandalone:false, isIOS:false, help:null };
@@ -507,6 +568,31 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
             '<li>Toque em <strong>"Adicionar"</strong>, no canto superior direito.</li>' +
           '</ol>' +
           '<p class="fine">Precisa ser pelo Safari &mdash; no iPhone, Chrome e outros navegadores nao tem essa opcao.</p>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  /* ---------- modal de confirmacao/aviso generico ---------- */
+  var CONFIRM = null; // { title, message, action, id, whatsapp }
+  function renderConfirmModal(){
+    if(!CONFIRM) return '';
+    var whatsappBtn = '';
+    if(CONFIRM.whatsapp && state.whatsappNumber){
+      whatsappBtn = '<a class="btn btn-primary btn-block" style="margin-top:10px;" target="_blank" rel="noopener" href="https://wa.me/55' + onlyDigits(state.whatsappNumber) + '">Falar no WhatsApp</a>';
+    }
+    var buttons = CONFIRM.action
+      ? '<div style="display:flex;gap:10px;margin-top:16px;">' +
+          '<button type="button" class="btn" style="flex:1;" data-action="confirm-no">Voltar</button>' +
+          '<button type="button" class="btn" style="flex:1;background:var(--danger);border-color:var(--danger);color:#fff;" data-action="confirm-yes">Confirmar</button>' +
+        '</div>'
+      : '<button type="button" class="btn btn-block" style="margin-top:16px;" data-action="confirm-no">Entendi</button>';
+    return (
+      '<div class="modal-overlay">' +
+        '<div class="modal-box">' +
+          '<div class="modal-head"><h2>' + esc(CONFIRM.title || 'Confirmar') + '</h2><button type="button" class="modal-close" data-action="confirm-no">&times;</button></div>' +
+          '<p>' + esc(CONFIRM.message) + '</p>' +
+          whatsappBtn + buttons +
         '</div>' +
       '</div>'
     );
@@ -627,7 +713,31 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   }
 
   /* ---------- rendering ---------- */
+  // Enquanto o usuario esta digitando em um campo, adia o redesenho completo
+  // da tela (que viria de uma atualizacao do Firestore em segundo plano) para
+  // nao perder o foco nem o texto ja digitado. O redesenho acontece assim que
+  // o campo perde o foco.
+  var renderPending = false;
+  function isTypingField(el){
+    if(!el) return false;
+    if(el.tagName === 'TEXTAREA') return true;
+    if(el.tagName === 'INPUT'){
+      var t = (el.type || 'text').toLowerCase();
+      return ['text','tel','email','password','number','search','date'].indexOf(t) !== -1;
+    }
+    return false;
+  }
   function render(){
+    var app = document.getElementById('app');
+    if(!app) return;
+    var active = document.activeElement;
+    if(active && app.contains(active) && isTypingField(active)){
+      renderPending = true;
+      return;
+    }
+    doRender();
+  }
+  function doRender(){
     var app = document.getElementById('app');
     if(!app) return;
     app.innerHTML = renderApp();
@@ -645,7 +755,8 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       '<div class="container">' +
         (SESSION.role === 'admin' ? renderAdmin() : renderCliente()) +
       '</div>' +
-      renderInstallHelpModal()
+      renderInstallHelpModal() +
+      renderConfirmModal()
     );
   }
 
@@ -687,37 +798,39 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     );
   }
 
+  function renderAddCarForm(){
+    var brandOptions = '<option value="" disabled selected>Selecione a marca</option>' +
+      CAR_BRANDS.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') +
+      '<option value="' + CAR_BRAND_OTHER + '">Outra marca...</option>';
+    return '<form data-form="add-car" class="grid-2" style="margin-top:12px;">' +
+      '<div class="field"><label for="car-brand">Marca</label><select id="car-brand" required>' + brandOptions + '</select></div>' +
+      '<div class="field" id="car-brand-other-wrap" style="display:none;"><label for="car-brand-other">Qual marca?</label><input type="text" id="car-brand-other" placeholder="Digite a marca"></div>' +
+      '<div class="field"><label for="car-model">Modelo</label><select id="car-model" disabled><option value="" selected>Selecione a marca primeiro</option></select></div>' +
+      '<div class="field" id="car-model-other-wrap" style="display:none;"><label for="car-model-other">Qual modelo?</label><input type="text" id="car-model-other" placeholder="Digite o modelo"></div>' +
+      '<div class="field"><label for="car-plate">Placa</label><input type="text" id="car-plate" required placeholder="ABC1D23" maxlength="7" style="text-transform:uppercase"></div>' +
+      '<div class="field"><label for="car-color">Cor</label><input type="text" id="car-color" required placeholder="Prata"></div>' +
+      '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Adicionar carro</button></div>' +
+    '</form>';
+  }
+
   function renderMeusCarros(client){
     var cars = clientCars(client.id);
     var html = '<div class="stack">';
     html += '<div class="card">';
     html += '<h2>Adicionar carro</h2>';
-    var brandOptions = '<option value="" disabled selected>Selecione a marca</option>' +
-      CAR_BRANDS.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') +
-      '<option value="' + CAR_BRAND_OTHER + '">Outra marca...</option>';
-    html += '<form data-form="add-car" class="grid-2" style="margin-top:12px;">' +
-      '<div class="field"><label for="car-brand">Marca</label><select id="car-brand" required>' + brandOptions + '</select></div>' +
-      '<div class="field" id="car-brand-other-wrap" style="display:none;"><label for="car-brand-other">Qual marca?</label><input type="text" id="car-brand-other" placeholder="Digite a marca"></div>' +
-      '<div class="field"><label for="car-model">Modelo</label><select id="car-model" disabled><option value="" selected>Selecione a marca primeiro</option></select></div>' +
-      '<div class="field" id="car-model-other-wrap" style="display:none;"><label for="car-model-other">Qual modelo?</label><input type="text" id="car-model-other" placeholder="Digite o modelo"></div>' +
-      '<div class="field"><label for="car-plate">Placa</label><input type="text" id="car-plate" required placeholder="ABC1D23" style="text-transform:uppercase"></div>' +
-      '<div class="field"><label for="car-color">Cor</label><input type="text" id="car-color" required placeholder="Prata"></div>' +
-      '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Adicionar carro</button></div>' +
-    '</form></div>';
+    html += renderAddCarForm();
+    html += '</div>';
 
     if(cars.length===0){
       html += '<div class="card empty"><div class="big">&#128663;</div><p>Voce ainda nao cadastrou nenhum carro.</p></div>';
     } else {
       html += '<div class="grid-2">';
       cars.forEach(function(c){
-        var justAdded = c.id === justAddedCarId;
         html += '<div class="card"><div class="card-row"><div>' +
           '<h3 style="text-transform:none;font-size:16px;">' + esc(c.model) + '</h3>' +
           '<p class="muted" style="margin:2px 0 6px;">' + esc(c.brand) + ' &middot; ' + esc(c.color) + '</p>' +
           '<span class="mono" style="font-size:14px;background:var(--surface-2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);">' + esc(c.plate.toUpperCase()) + '</span>' +
-          '</div><button class="btn btn-danger btn-sm" data-action="remove-car" data-id="' + c.id + '">Remover</button></div>' +
-          (justAdded? '<button type="button" class="btn btn-primary btn-block" style="margin-top:12px;" data-action="goto-agendar-with-car" data-id="' + c.id + '">Agendar com esse carro</button>' : '') +
-        '</div>';
+          '</div><button class="btn btn-danger btn-sm" data-action="remove-car" data-id="' + c.id + '">Remover</button></div></div>';
       });
       html += '</div>';
     }
@@ -735,35 +848,57 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       var car = findCar(a.carId);
       var services = a.serviceIds.map(findService).filter(Boolean);
       var canCancel = (a.status!=='concluido' && a.status!=='cancelado');
+      var canRemarcar = (a.status!=='concluido' && a.status!=='cancelado');
       html += '<div class="card"><div class="card-row" style="align-items:flex-start;">' +
         '<div>' +
         '<div style="font-family:var(--font-display);font-size:16px;text-transform:uppercase;">' + formatDateBR(a.date) + ' &middot; <span class="mono">' + a.time + '</span></div>' +
         '<p class="muted" style="margin:4px 0;">' + services.map(function(s){ return esc(s.name); }).join(', ') + '</p>' +
         '<p style="margin:0;font-size:13px;">' + (car? esc(car.model) + ' - ' + esc(car.plate.toUpperCase()) : '&mdash;') + ' &middot; <span class="mono">' + formatBRL(totalPrice(a.serviceIds)) + '</span></p>' +
+        (a.status==='pendente'? '<p class="muted" style="margin:6px 0 0;font-size:12.5px;">Aguardando confirmacao do lava jato.</p>' : '') +
         '</div>' +
         '<div style="text-align:right;">' +
         '<span class="pill pill-' + a.status + '">' + statusMeta(a.status).label + '</span>' +
-        (canCancel? '<div style="margin-top:8px;"><button class="btn btn-danger btn-sm" data-action="client-cancel" data-id="' + a.id + '">Cancelar</button></div>' : '') +
+        '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">' +
+        (canRemarcar? '<button class="btn btn-sm" data-action="remarcar" data-id="' + a.id + '">Remarcar</button>' : '') +
+        (canCancel? '<button class="btn btn-danger btn-sm" data-action="client-cancel" data-id="' + a.id + '">Cancelar</button>' : '') +
+        (a.status==='pendente' && state.whatsappNumber? '<a class="btn btn-sm" target="_blank" rel="noopener" href="https://wa.me/55' + onlyDigits(state.whatsappNumber) + '?text=' + encodeURIComponent('Ola! Sobre meu agendamento de ' + formatDateBR(a.date) + ' as ' + a.time + '.') + '">Falar no WhatsApp</a>' : '') +
+        '</div>' +
         '</div></div></div>';
     });
     html += '</div>';
     return html;
   }
 
-  function renderCalendar(b){
+  function renderCalendar(b, dur){
     var today = new Date();
     var todayStr = toDateStr(today);
+    var maxDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + BOOKING_WINDOW_DAYS);
     var viewYear = b.calYear != null ? b.calYear : today.getFullYear();
     var viewMonth = b.calMonth != null ? b.calMonth : today.getMonth();
     var isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth());
+    var firstOfNextMonth = new Date(viewYear, viewMonth + 1, 1);
+    var nextDisabled = firstOfNextMonth > maxDate;
     var firstOfMonth = new Date(viewYear, viewMonth, 1);
     var startWeekday = firstOfMonth.getDay();
     var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-    var html = '<div class="cal-head">' +
+    var html = '<div class="cal-shortcuts">' +
+      '<button type="button" class="btn btn-sm" data-action="cal-today">Hoje</button>' +
+      '<button type="button" class="btn btn-sm" data-action="cal-tomorrow">Amanha</button>' +
+      '<button type="button" class="btn btn-sm" data-action="cal-next-free">Proximo horario livre</button>' +
+    '</div>';
+
+    html += '<div class="cal-legend">' +
+      '<span><i style="background:var(--surface-2);border:1px solid var(--border);"></i>Disponivel</span>' +
+      '<span><i style="background:var(--danger-bg);border:1px solid var(--danger);"></i>Feriado/folga</span>' +
+      '<span><i style="background:var(--warning-bg);border:1px solid var(--warning);"></i>Lotado</span>' +
+      '<span><i style="opacity:0.3;background:var(--surface-2);border:1px solid var(--border);"></i>Fechado</span>' +
+    '</div>';
+
+    html += '<div class="cal-head">' +
       '<button type="button" class="cal-nav" data-action="cal-prev" ' + (isCurrentMonth?'disabled':'') + '>&lsaquo;</button>' +
       '<span class="cal-title">' + MONTH_NAMES[viewMonth] + ' ' + viewYear + '</span>' +
-      '<button type="button" class="cal-nav" data-action="cal-next">&rsaquo;</button>' +
+      '<button type="button" class="cal-nav" data-action="cal-next" ' + (nextDisabled?'disabled':'') + '>&rsaquo;</button>' +
     '</div>';
 
     html += '<div class="cal-grid cal-grid-head">';
@@ -773,14 +908,42 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     html += '<div class="cal-grid">';
     for(var i=0;i<startWeekday;i++){ html += '<div class="cal-cell empty"></div>'; }
     for(var day=1; day<=daysInMonth; day++){
-      var ds = toDateStr(new Date(viewYear, viewMonth, day));
+      var cellDate = new Date(viewYear, viewMonth, day);
+      var ds = toDateStr(cellDate);
       var isPast = ds < todayStr;
-      var open = isDayOpen(ds) && !isPast;
+      var isTooFar = cellDate > maxDate;
+      var isClosed = state.availability.workDays.indexOf(cellDate.getDay()) === -1;
+      var isBlocked = state.availability.blockedDates.indexOf(ds) !== -1;
+      var isFull = (!isPast && !isTooFar && !isClosed && !isBlocked && dur) ? computeAvailableSlots(ds, dur, null).length === 0 : false;
+      var disabled = isPast || isTooFar || isClosed || isBlocked || isFull;
+      var stateClass = (isPast || isTooFar) ? '' : isBlocked ? 'is-blocked' : isFull ? 'is-full' : isClosed ? 'is-closed' : '';
       var sel = b.date === ds;
-      html += '<button type="button" class="cal-cell ' + (sel?'selected':'') + (ds===todayStr?' is-today':'') + '" data-action="select-day" data-date="' + ds + '" ' + (open?'':'disabled') + '>' + day + '</button>';
+      html += '<button type="button" class="cal-cell ' + stateClass + (sel?' selected':'') + (ds===todayStr?' is-today':'') + '" data-action="select-day" data-date="' + ds + '" ' + (disabled?'disabled':'') + '>' + day + '</button>';
     }
     html += '</div>';
     return html;
+  }
+
+  function renderStepsBar(step){
+    var labels = ['Servicos','Carro','Data','Confirmar'];
+    var html = '<div class="steps">';
+    for(var i=1;i<=4;i++){
+      var cls = step>i ? 'done' : (step===i ? 'active' : '');
+      html += '<div class="step-item ' + cls + '"><div class="step-dot"></div><span class="step-label">' + labels[i-1] + '</span></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderBookingSummary(b){
+    if(!b.serviceIds.length) return '';
+    var services = b.serviceIds.map(findService).filter(Boolean);
+    return '<div class="booking-summary"><span>' + services.map(function(s){ return esc(s.name); }).join(', ') + '</span>' +
+      '<span class="mono">' + formatBRL(totalPrice(b.serviceIds)) + ' &middot; ' + formatDuration(totalDuration(b.serviceIds)) + '</span></div>';
+  }
+
+  function renderSlotButton(b, t){
+    return '<button type="button" class="slot-btn ' + (b.time===t?'selected':'') + '" data-action="select-time" data-time="' + t + '">' + t + '</button>';
   }
 
   function renderAgendar(client){
@@ -789,12 +952,8 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     var cars = clientCars(client.id);
     var backBtn = '<button type="button" class="btn-ghost" style="padding:0;margin-bottom:12px;font-size:13px;" data-action="booking-back">&lsaquo; Voltar</button>';
 
-    var html = '<div class="steps">' +
-      '<div class="step ' + (step>1?'done':'') + '"></div>' +
-      '<div class="step ' + (step>2?'done':'') + '"></div>' +
-      '<div class="step ' + (step>3?'done':'') + '"></div>' +
-      '<div class="step ' + (step>4?'done':'') + '"></div>' +
-      '</div>';
+    var html = renderStepsBar(step);
+    if(step !== 4) html += renderBookingSummary(b);
 
     if(step === 1){
       html += '<div class="card"><h2>1. Escolha os servicos</h2><p class="muted">Voce pode selecionar mais de um.</p>';
@@ -814,10 +973,8 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
 
     if(step === 2){
       html += '<div class="card">' + backBtn + '<h2>2. Escolha o carro</h2>';
-      if(cars.length===0){
-        html += '<p class="muted">Voce ainda nao tem um carro cadastrado. <button class="btn btn-ghost" data-action="client-tab" data-tab="meus-carros">Cadastrar carro</button></p>';
-      } else {
-        html += '<div class="grid-2" style="margin-top:10px;">';
+      if(cars.length){
+        html += '<div class="grid-2" style="margin-top:10px;margin-bottom:18px;">';
         cars.forEach(function(c){
           var sel = b.carId === c.id;
           html += '<button type="button" class="service-card ' + (sel?'selected':'') + '" data-action="select-car" data-id="' + c.id + '" style="text-align:left;">' +
@@ -825,7 +982,11 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
             '<span class="mono">' + esc(c.plate.toUpperCase()) + '</span></button>';
         });
         html += '</div>';
+        html += '<p class="muted" style="margin-bottom:6px;">Ou cadastre um carro novo:</p>';
+      } else {
+        html += '<p class="muted" style="margin:10px 0 6px;">Voce ainda nao tem um carro cadastrado. Cadastre um abaixo:</p>';
       }
+      html += renderAddCarForm();
       html += '</div>';
       return html;
     }
@@ -833,17 +994,24 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     if(step === 3){
       var dur = totalDuration(b.serviceIds);
       html += '<div class="card">' + backBtn + '<h2>3. Escolha data e horario</h2>';
-      html += renderCalendar(b);
+      html += renderCalendar(b, dur);
       if(b.date){
         var slots = computeAvailableSlots(b.date, dur, null);
         if(slots.length===0){
           html += '<p class="muted">Nenhum horario disponivel nesse dia para a duracao selecionada (' + formatDuration(dur) + '). Tente outra data.</p>';
         } else {
-          html += '<div class="slot-grid">';
-          slots.forEach(function(t){
-            html += '<button type="button" class="slot-btn ' + (b.time===t?'selected':'') + '" data-action="select-time" data-time="' + t + '">' + t + '</button>';
-          });
-          html += '</div>';
+          var manha = slots.filter(function(t){ return timeToMin(t) < 720; });
+          var tarde = slots.filter(function(t){ return timeToMin(t) >= 720; });
+          if(manha.length){
+            html += '<div class="slot-section-title">Manha</div><div class="slot-grid">';
+            manha.forEach(function(t){ html += renderSlotButton(b, t); });
+            html += '</div>';
+          }
+          if(tarde.length){
+            html += '<div class="slot-section-title">Tarde</div><div class="slot-grid">';
+            tarde.forEach(function(t){ html += renderSlotButton(b, t); });
+            html += '</div>';
+          }
         }
       }
       html += '</div>';
@@ -1036,6 +1204,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     html += '<form data-form="save-config" class="grid-2" style="margin-top:12px;">' +
       '<div class="field"><label for="cfg-name">Nome do lava jato</label><input type="text" id="cfg-name" value="' + esc(state.businessName) + '" required></div>' +
       '<div class="field"><label for="cfg-pin">PIN de acesso do painel</label><input type="text" id="cfg-pin" value="' + esc(state.adminPin) + '" required></div>' +
+      '<div class="field" style="grid-column:1/-1"><label for="cfg-whatsapp">WhatsApp para contato (com DDD)</label><input type="tel" id="cfg-whatsapp" value="' + esc(state.whatsappNumber) + '" placeholder="11 91234-5678"></div>' +
       '<div style="grid-column:1/-1"><button type="submit" class="btn btn-primary">Salvar</button></div>' +
     '</form></div>';
     html += '<div class="card"><h2>Notificacoes</h2>';
@@ -1098,7 +1267,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
 
     app.addEventListener('click', function(ev){
       if(ev.target.classList && ev.target.classList.contains('modal-overlay')){
-        PWA.help = null; render(); return;
+        PWA.help = null; CONFIRM = null; render(); return;
       }
       var el = ev.target.closest('[data-action]');
       if(!el) return;
@@ -1124,10 +1293,26 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       }
     });
 
+    app.addEventListener('input', function(ev){
+      if(ev.target.id === 'f-phone'){
+        ev.target.value = maskPhone(ev.target.value);
+      } else if(ev.target.id === 'car-plate'){
+        ev.target.value = maskPlate(ev.target.value);
+      }
+    });
+
+    app.addEventListener('focusout', function(){
+      if(renderPending){
+        renderPending = false;
+        setTimeout(doRender, 0);
+      }
+    }, true);
+
     app.addEventListener('submit', function(ev){
       var form = ev.target.closest('form[data-form]');
       if(!form) return;
       ev.preventDefault();
+      if(document.activeElement && form.contains(document.activeElement)) document.activeElement.blur();
       handleForm(form.getAttribute('data-form'), form);
     });
   }
@@ -1146,19 +1331,19 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     }
   }
 
+  function doClientCancel(id){
+    updateDoc(doc(db,'appointments', id), { status:'cancelado' }).then(function(){ toast('Agendamento cancelado.'); }).catch(function(){ toast('Erro ao cancelar.'); });
+  }
+  function doRemoveCar(id){
+    deleteDoc(doc(db,'cars', id)).then(function(){ toast('Carro removido.'); }).catch(function(){ toast('Erro ao remover carro.'); });
+  }
+
   function handleAction(action, el){
     var id = el.getAttribute('data-id');
     if(action === 'brand-secret-click'){
       handleBrandSecretTap();
     } else if(action === 'client-tab'){
       SESSION.clientTab = el.getAttribute('data-tab');
-      justAddedCarId = null;
-      saveSession(); render();
-    } else if(action === 'goto-agendar-with-car'){
-      SESSION.booking.carId = id;
-      SESSION.booking.step = 1;
-      SESSION.clientTab = 'agendar';
-      justAddedCarId = null;
       saveSession(); render();
     } else if(action === 'admin-tab'){
       SESSION.adminTab = el.getAttribute('data-tab');
@@ -1172,7 +1357,13 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       SESSION.role = 'cliente';
       saveSession(); render();
     } else if(action === 'remove-car'){
-      deleteDoc(doc(db,'cars', id)).then(function(){ toast('Carro removido.'); }).catch(function(){ toast('Erro ao remover carro.'); });
+      var hasActive = state.appointments.some(function(a){ return a.carId===id && a.status!=='cancelado' && a.status!=='concluido'; });
+      if(hasActive){
+        CONFIRM = { title:'Nao e possivel remover', message:'Esse carro tem agendamento(s) ativos. Cancele-os antes de remover o carro.', action:null };
+      } else {
+        CONFIRM = { title:'Remover carro', message:'Tem certeza que deseja remover esse carro?', action:'do-remove-car', id:id };
+      }
+      render();
     } else if(action === 'toggle-service'){
       var b = SESSION.booking;
       var idx = b.serviceIds.indexOf(id);
@@ -1202,6 +1393,25 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       if(m > 11){ m = 0; y++; } else if(m < 0){ m = 11; y--; }
       b2.calMonth = m; b2.calYear = y;
       saveSession(); render();
+    } else if(action === 'cal-today' || action === 'cal-tomorrow' || action === 'cal-next-free'){
+      var b3 = SESSION.booking;
+      var dur3 = totalDuration(b3.serviceIds);
+      var targetDs = null;
+      if(action === 'cal-today'){
+        targetDs = todayStr();
+      } else if(action === 'cal-tomorrow'){
+        var tmr = new Date(); tmr.setDate(tmr.getDate()+1);
+        targetDs = toDateStr(tmr);
+      } else {
+        targetDs = findNextAvailableDate(dur3);
+        if(!targetDs){ toast('Nenhum horario livre encontrado nos proximos ' + BOOKING_WINDOW_DAYS + ' dias.'); return; }
+      }
+      b3.date = targetDs;
+      b3.time = null;
+      var dd = new Date(targetDs + 'T00:00:00');
+      b3.calYear = dd.getFullYear();
+      b3.calMonth = dd.getMonth();
+      saveSession(); render();
     } else if(action === 'select-time'){
       SESSION.booking.time = el.getAttribute('data-time');
       SESSION.booking.step = 4;
@@ -1214,13 +1424,37 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
         SESSION.booking = { serviceIds:[], carId:null, date:null, time:null, step:1 };
         SESSION.clientTab = 'meus-agendamentos';
         saveSession(); render();
-        toast('Agendamento confirmado!');
+        toast('Solicitacao enviada! Avisaremos quando o lava jato confirmar.');
         fetch('/api/notify-new-booking', {
           method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ appointmentId: ref.id })
         }).catch(function(){});
       }).catch(function(){ toast('Nao foi possivel confirmar. Tente novamente.'); });
+    } else if(action === 'remarcar'){
+      var apptR = state.appointments.find(function(a){ return a.id===id; });
+      if(!apptR) return;
+      updateDoc(doc(db,'appointments', id), { status:'cancelado' }).catch(function(){});
+      SESSION.booking = { serviceIds: apptR.serviceIds.slice(), carId: apptR.carId, date:null, time:null, step:3 };
+      SESSION.clientTab = 'agendar';
+      saveSession(); render();
+      toast('Escolha o novo horario.');
     } else if(action === 'client-cancel'){
-      updateDoc(doc(db,'appointments', id), { status:'cancelado' }).then(function(){ toast('Agendamento cancelado.'); }).catch(function(){ toast('Erro ao cancelar.'); });
+      var apptC = state.appointments.find(function(a){ return a.id===id; });
+      if(!apptC) return;
+      var hrs = hoursUntilAppt(apptC);
+      if(hrs !== null && hrs < MIN_CANCEL_HOURS){
+        CONFIRM = { title:'Prazo para cancelar', message:'Esse agendamento e em menos de ' + MIN_CANCEL_HOURS + ' horas. Cancelamentos com prazo curto precisam ser feitos direto com o lava jato.', action:null, whatsapp:true };
+      } else {
+        CONFIRM = { title:'Cancelar agendamento', message:'Tem certeza que deseja cancelar esse agendamento?', action:'do-client-cancel', id:id };
+      }
+      render();
+    } else if(action === 'confirm-yes'){
+      var c = CONFIRM;
+      CONFIRM = null;
+      if(c && c.action === 'do-client-cancel') doClientCancel(c.id);
+      else if(c && c.action === 'do-remove-car') doRemoveCar(c.id);
+      render();
+    } else if(action === 'confirm-no'){
+      CONFIRM = null; render();
     } else if(action === 'set-status'){
       var status = el.getAttribute('data-status');
       updateDoc(doc(db,'appointments', id), { status: status }).then(function(){
@@ -1286,15 +1520,25 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
         }).catch(function(){ toast('Nao foi possivel continuar. Tente novamente.'); });
       }
     } else if(name === 'add-car'){
-      var plate = form.querySelector('#car-plate').value.trim();
+      var plate = maskPlate(form.querySelector('#car-plate').value);
       var brandSel = form.querySelector('#car-brand').value;
       var brand = brandSel === CAR_BRAND_OTHER ? form.querySelector('#car-brand-other').value.trim() : brandSel;
       var modelSel = form.querySelector('#car-model').value;
       var model = modelSel === CAR_MODEL_OTHER ? form.querySelector('#car-model-other').value.trim() : modelSel.trim();
       var color = form.querySelector('#car-color').value.trim();
       if(!plate || !model || !brand || !color){ toast('Preencha todos os campos do carro.'); return; }
+      if(!PLATE_RE.test(plate)){ toast('Placa invalida. Use o formato ABC1D23.'); return; }
+      var dupPlate = state.cars.some(function(c){ return c.plate.toUpperCase() === plate; });
+      if(dupPlate){ toast('Essa placa ja esta cadastrada.'); return; }
       addDoc(COL.cars, { clientId: SESSION.clientId, plate: plate, model: model, brand: brand, color: color })
-        .then(function(ref){ justAddedCarId = ref.id; toast('Carro cadastrado.'); render(); })
+        .then(function(ref){
+          toast('Carro cadastrado.');
+          if(SESSION.clientTab === 'agendar'){
+            SESSION.booking.carId = ref.id;
+            SESSION.booking.step = 3;
+          }
+          saveSession(); render();
+        })
         .catch(function(){ toast('Erro ao cadastrar carro.'); });
     } else if(name === 'admin-login'){
       var pin = form.querySelector('#admin-pin').value.trim();
@@ -1332,8 +1576,9 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     } else if(name === 'save-config'){
       var bn = form.querySelector('#cfg-name').value.trim();
       var pn = form.querySelector('#cfg-pin').value.trim();
+      var wa = onlyDigits(form.querySelector('#cfg-whatsapp').value);
       if(!bn || !pn){ toast('Preencha nome e PIN.'); return; }
-      updateDoc(CONFIG_REF, { businessName: bn, adminPin: pn })
+      updateDoc(CONFIG_REF, { businessName: bn, adminPin: pn, whatsappNumber: wa })
         .then(function(){ toast('Configuracoes salvas.'); }).catch(function(){ toast('Erro ao salvar configuracoes.'); });
     }
   }
