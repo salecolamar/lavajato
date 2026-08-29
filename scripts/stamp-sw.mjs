@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const swPath = path.join(__dirname, '..', 'sw.js');
+const swPath = path.join(__dirname, '..', 'public', 'sw.js');
 
 const content = fs.readFileSync(swPath, 'utf8');
 const stamped = content.replace(
