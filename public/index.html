@@ -279,19 +279,54 @@
   .install-help .fine{ font-size:11.5px; color:var(--text-muted); }
 
   #splash{
-    position:fixed; inset:0; z-index:9999; background:#000000;
+    position:fixed; inset:0; z-index:9999;
+    background:radial-gradient(circle at 50% 45%, rgba(41,182,246,0.12), transparent 60%) #000000;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     transition:opacity 0.5s ease; opacity:1;
   }
   #splash.splash-hide{ opacity:0; pointer-events:none; }
-  #splash img{ width:280px; max-width:70vw; height:auto; animation:splash-pop 0.6s ease; }
+  .splash-frame{
+    position:relative; width:280px; max-width:70vw;
+    animation:splash-pop 0.6s ease, splash-glow 2.2s ease-in-out 0.6s infinite alternate;
+  }
+  .splash-frame img{
+    display:block; width:100%; height:auto;
+    animation:splash-glitch 0.5s steps(2,end) 2;
+  }
+  .splash-frame::after{
+    content:''; position:absolute; left:0; right:0; top:-16%; height:14%;
+    background:linear-gradient(180deg, transparent, rgba(79,195,247,0.6) 45%, rgba(124,77,255,0.6) 55%, transparent);
+    filter:blur(1px); opacity:0; pointer-events:none;
+    animation:splash-scan 1.4s cubic-bezier(.4,0,.2,1) 0.15s 1;
+  }
   @keyframes splash-pop{ from{ opacity:0; transform:scale(0.85); } to{ opacity:1; transform:scale(1); } }
-  @media (prefers-reduced-motion: reduce){ #splash img{ animation:none; } }
+  @keyframes splash-glow{
+    from{ filter:drop-shadow(0 0 12px rgba(41,182,246,0.25)); }
+    to{ filter:drop-shadow(0 0 26px rgba(124,77,255,0.45)); }
+  }
+  @keyframes splash-glitch{
+    0%{ clip-path:inset(0 0 0 0); transform:translateX(0); filter:none; }
+    20%{ clip-path:inset(10% 0 60% 0); transform:translateX(-4px); filter:hue-rotate(15deg); }
+    40%{ clip-path:inset(60% 0 5% 0); transform:translateX(4px); filter:hue-rotate(-10deg); }
+    60%{ clip-path:inset(20% 0 40% 0); transform:translateX(-2px); filter:none; }
+    80%,100%{ clip-path:inset(0 0 0 0); transform:translateX(0); filter:none; }
+  }
+  @keyframes splash-scan{
+    0%{ top:-16%; opacity:0; }
+    8%{ opacity:1; }
+    88%{ opacity:1; }
+    100%{ top:100%; opacity:0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .splash-frame, .splash-frame img, .splash-frame::after{ animation:none; }
+  }
 </style>
 </head>
 <body>
 <div id="splash" aria-hidden="true">
-  <img src="/appvia-logo.jpg" alt="AppVia" width="280" height="280">
+  <div class="splash-frame">
+    <img src="/appvia-logo.jpg" alt="AppVia" width="280" height="280">
+  </div>
 </div>
 <script>
   setTimeout(function(){
