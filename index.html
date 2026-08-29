@@ -288,7 +288,7 @@ import {
   onSnapshot, arrayUnion
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getMessaging, getToken, isSupported as messagingIsSupported } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
+import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
 
 (function(){
   "use strict";
@@ -664,6 +664,19 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
   }
 
   /* ---------- notificacoes: pede permissao + token FCM e salva em algum lugar ---------- */
+  // Enquanto o app esta aberto na tela, o service worker nao mostra a
+  // notificacao do sistema (isso so acontece com o app fechado/em segundo
+  // plano) - entao avisamos com um toast dentro do proprio app.
+  var foregroundHandlerRegistered = false;
+  function registerForegroundMessages(messaging){
+    if(foregroundHandlerRegistered) return;
+    foregroundHandlerRegistered = true;
+    onMessage(messaging, function(payload){
+      var n = payload.notification || {};
+      toast((n.title? n.title + ': ' : '') + (n.body || 'Voce tem uma notificacao nova.'));
+    });
+  }
+
   function pedirTokenPush(){
     return messagingIsSupported().then(function(supported){
       if(!supported) return null;
@@ -672,6 +685,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
         if(perm !== 'granted') return null;
         return navigator.serviceWorker.ready.then(function(registration){
           var messaging = getMessaging(fbApp);
+          registerForegroundMessages(messaging);
           return getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
         });
       });
@@ -1587,9 +1601,23 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     }
   }
 
+  // Se a permissao de notificacao ja tinha sido concedida numa visita
+  // anterior, religa o aviso em primeiro plano (toast) sem precisar pedir
+  // permissao de novo.
+  function initForegroundMessagingIfGranted(){
+    if(typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    messagingIsSupported().then(function(supported){
+      if(!supported || !navigator.serviceWorker) return;
+      return navigator.serviceWorker.ready.then(function(){
+        registerForegroundMessages(getMessaging(fbApp));
+      });
+    }).catch(function(){});
+  }
+
   /* ---------- init ---------- */
   render();
   bootFirebase();
+  initForegroundMessagingIfGranted();
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
