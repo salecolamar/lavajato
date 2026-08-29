@@ -285,18 +285,17 @@
   }
   #splash.splash-hide{ opacity:0; pointer-events:none; }
   .splash-terminal{
-    font-family:var(--font-mono), 'IBM Plex Mono', monospace; font-size:14px; line-height:1.7;
-    color:#4FC3F7; text-align:left; min-width:240px; min-height:80px;
-    transition:opacity 0.35s ease;
+    font-family:var(--font-mono), 'IBM Plex Mono', monospace; font-size:13px; line-height:1.7;
+    color:#4FC3F7; text-align:left; min-width:240px; min-height:76px; margin-top:18px;
   }
-  .splash-terminal.splash-term-hide{ opacity:0; }
   .splash-terminal .line-prefix{ color:#7C4DFF; }
   .splash-cursor{ color:#4FC3F7; animation:splash-blink 0.9s steps(1) infinite; }
   .splash-frame{
     position:relative; width:280px; max-width:70vw;
-    opacity:0; transform:scale(0.92);
+    animation:splash-pop 0.5s ease;
   }
   .splash-frame img{ display:block; width:100%; height:auto; }
+  @keyframes splash-pop{ from{ opacity:0; transform:scale(0.92); } to{ opacity:1; transform:scale(1); } }
   @keyframes splash-blink{ 50%{ opacity:0; } }
   @media (prefers-reduced-motion: reduce){
     .splash-cursor{ animation:none; }
@@ -305,27 +304,26 @@
 </head>
 <body>
 <div id="splash" aria-hidden="true">
-  <div class="splash-terminal"><span id="splashTermOut"></span><span class="splash-cursor">&#9608;</span></div>
   <div class="splash-frame">
     <img src="/appvia-logo.jpg" alt="AppVia" width="280" height="280">
   </div>
+  <div class="splash-terminal"><span id="splashTermOut"></span><span class="splash-cursor">&#9608;</span></div>
 </div>
 <script>
   (function(){
     var lines = ['carregando appvia', 'compilando </> interface', 'pronto.'];
     var out = document.getElementById('splashTermOut');
-    var frame = document.querySelector('.splash-frame');
-    var term = document.querySelector('.splash-terminal');
     if(!out){ return; }
     var li = 0, ci = 0;
     function typeChar(){
+      if(!document.body.contains(out)) return;
       if(li >= lines.length){
-        if(frame){
-          frame.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-          frame.style.opacity = '1';
-          frame.style.transform = 'scale(1)';
-        }
-        setTimeout(function(){ if(term) term.classList.add('splash-term-hide'); }, 350);
+        setTimeout(function(){
+          if(!document.body.contains(out)) return;
+          out.innerHTML = '';
+          li = 0; ci = 0;
+          typeChar();
+        }, 700);
         return;
       }
       var line = lines[li];
