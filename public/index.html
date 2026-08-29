@@ -277,9 +277,62 @@
   .install-help ol{ padding-left:20px; margin:0 0 14px; }
   .install-help li{ margin-bottom:4px; }
   .install-help .fine{ font-size:11.5px; color:var(--text-muted); }
+
+  #splash{
+    position:fixed; inset:0; z-index:9999; background:#050608;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:opacity 0.5s ease; opacity:1;
+  }
+  #splash.splash-hide{ opacity:0; pointer-events:none; }
+  #splash svg{ animation:splash-pop 0.6s ease; }
+  .splash-word{
+    margin-top:18px; font-family:'Arial Black', Arial, sans-serif; font-weight:900;
+    font-size:34px; letter-spacing:1px; color:#fff;
+  }
+  .splash-word em{
+    font-style:normal;
+    background:linear-gradient(135deg,#29B6F6,#7C4DFF);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .splash-tag{ margin-top:8px; font-size:11px; letter-spacing:4px; color:#8A8F98; }
+  .splash-rule{ width:64px; height:2px; margin:12px auto 0; background:linear-gradient(90deg,#29B6F6,#7C4DFF); border-radius:2px; }
+  @keyframes splash-pop{ from{ opacity:0; transform:scale(0.85); } to{ opacity:1; transform:scale(1); } }
+  @media (prefers-reduced-motion: reduce){ #splash svg{ animation:none; } }
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <svg viewBox="0 0 220 260" width="120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="splashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#29B6F6"/>
+        <stop offset="100%" stop-color="#7C4DFF"/>
+      </linearGradient>
+    </defs>
+    <rect x="168" y="46" width="10" height="10" rx="2" fill="#29B6F6"/>
+    <rect x="150" y="64" width="14" height="14" rx="2" fill="#4FC3F7"/>
+    <rect x="178" y="70" width="9" height="9" rx="2" fill="#5C6BC0"/>
+    <rect x="140" y="88" width="18" height="18" rx="3" fill="#42A5F5"/>
+    <rect x="165" y="98" width="12" height="12" rx="2" fill="#7C4DFF"/>
+    <rect x="45" y="12" width="110" height="190" rx="20" fill="none" stroke="url(#splashGrad)" stroke-width="8"/>
+    <line x1="86" y1="28" x2="114" y2="28" stroke="url(#splashGrad)" stroke-width="5" stroke-linecap="round"/>
+    <line x1="86" y1="186" x2="114" y2="186" stroke="url(#splashGrad)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M90,78 L68,107 L90,136" fill="none" stroke="url(#splashGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="112" y1="72" x2="90" y2="142" stroke="url(#splashGrad)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M112,78 L134,107 L112,136" fill="none" stroke="url(#splashGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="splash-word"><span>APP</span><em>VIA</em></div>
+  <div class="splash-tag">IDEIAS. C&Oacute;DIGO. SOLU&Ccedil;&Otilde;ES.</div>
+  <div class="splash-rule"></div>
+</div>
+<script>
+  setTimeout(function(){
+    var s = document.getElementById('splash');
+    if(!s) return;
+    s.classList.add('splash-hide');
+    setTimeout(function(){ s.remove(); }, 550);
+  }, 1600);
+</script>
 <div id="app"></div>
 <div id="toast-root" class="toast-root"></div>
 <script id="app-logic" type="module">
