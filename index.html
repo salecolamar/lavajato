@@ -1057,7 +1057,7 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
     var pending = pendingCount();
     if(pending > 0){
       html += '<div class="alert-banner"><span>&#128276; Voce tem ' + pending + ' agendamento' + (pending>1?'s':'') + ' pendente' + (pending>1?'s':'') + ' aguardando aceite.</span>' +
-        '<button type="button" class="btn btn-primary btn-sm" data-action="admin-tab" data-tab="agenda">Ver agora</button></div>';
+        '<button type="button" class="btn btn-primary btn-sm" data-action="ver-pendentes">Ver agora</button></div>';
     }
 
     if(SESSION.adminTab==='servicos') html += renderAdminServicos();
@@ -1347,6 +1347,10 @@ import { getMessaging, getToken, isSupported as messagingIsSupported } from 'htt
       saveSession(); render();
     } else if(action === 'admin-tab'){
       SESSION.adminTab = el.getAttribute('data-tab');
+      saveSession(); render();
+    } else if(action === 'ver-pendentes'){
+      SESSION.adminTab = 'agendamentos';
+      SESSION.apptFilter = 'pendente';
       saveSession(); render();
     } else if(action === 'client-logout'){
       SESSION.clientId = null;
