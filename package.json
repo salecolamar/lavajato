@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "build": "node scripts/stamp-sw.mjs"
+  },
   "dependencies": {
     "firebase-admin": "^12.1.1"
   }
