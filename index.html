@@ -7,12 +7,12 @@
 <title>Brilho Total</title>
 <meta name="description" content="Agendamento online de lavagem de carros.">
 
-<meta name="theme-color" content="#0A0A0A">
-<meta name="background-color" content="#0A0A0A">
+<meta name="theme-color" content="#0B84D6">
+<meta name="background-color" content="#EFF6FC">
 
 <!-- iOS: comportamento de app em tela cheia -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Brilho Total">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 
@@ -25,26 +25,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style id="app-style">
   :root{
-    --bg:#0A0A0A;
-    --surface:#161616;
-    --surface-2:#1F1F1F;
-    --surface-3:#2A2A2A;
-    --border:#302B1A;
-    --text:#F5F3EC;
-    --text-muted:#9A9689;
-    --accent:#FFD400;
-    --accent-strong:#FFE569;
-    --accent-soft:#2B2408;
-    --accent-contrast:#0A0A0A;
-    --success:#3ECF6E;
-    --success-bg:#132A1C;
-    --warning:#FF9F1C;
-    --warning-bg:#3A2408;
-    --danger:#FF5C5C;
-    --danger-bg:#331414;
-    --neutral:#9A9689;
-    --neutral-bg:#232323;
-    --shadow: 0 4px 14px rgba(0,0,0,0.5);
+    --bg:#EFF6FC;
+    --surface:#FFFFFF;
+    --surface-2:#E7F1FA;
+    --surface-3:#D6E8F7;
+    --border:#C6DEF2;
+    --text:#0F2A42;
+    --text-muted:#5D7C97;
+    --accent:#0B84D6;
+    --accent-strong:#075C99;
+    --accent-soft:#DCEEFC;
+    --accent-contrast:#FFFFFF;
+    --success:#16A34A;
+    --success-bg:#E3F7EA;
+    --warning:#E08A00;
+    --warning-bg:#FDF0D8;
+    --danger:#DC2626;
+    --danger-bg:#FBE4E4;
+    --neutral:#64748B;
+    --neutral-bg:#EAF0F5;
+    --shadow: 0 4px 14px rgba(15,42,66,0.1);
     --radius: 12px;
     --font-display: 'Oswald', 'Arial Narrow', sans-serif;
     --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1223,8 +1223,12 @@ import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported 
     '</form></div>';
     html += '<div class="card"><h2>Notificacoes</h2>';
     html += '<p class="muted">Receba um aviso no celular sempre que um cliente marcar um agendamento novo.</p>';
+    if(PWA.isIOS && !PWA.isStandalone){
+      html += '<p class="hint" style="color:var(--warning);">No iPhone, notificacao com o app fechado so funciona se o app estiver instalado na tela de inicio. Instale primeiro (botao "Baixar iPhone" na tela de identificacao) e abra por esse icone antes de ativar aqui.</p>';
+    }
     if(NOTIF.active){
-      html += '<p style="color:var(--success);font-weight:600;margin:0;">Notificacoes ativadas neste aparelho.</p>';
+      html += '<p style="color:var(--success);font-weight:600;margin:0 0 8px;">Notificacoes ativadas neste aparelho.</p>';
+      html += '<button type="button" class="btn btn-sm" data-action="enable-notifications" ' + (NOTIF.busy?'disabled':'') + '>' + (NOTIF.busy?'Reativando...':'Reativar (se parou de funcionar)') + '</button>';
     } else {
       html += '<button type="button" class="btn btn-primary" data-action="enable-notifications" ' + (NOTIF.busy?'disabled':'') + '>' + (NOTIF.busy?'Ativando...':'Ativar notificacoes') + '</button>';
     }
