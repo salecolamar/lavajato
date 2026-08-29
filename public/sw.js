@@ -1,4 +1,4 @@
-const CACHE = 'lavajato-1788026136846';
+const CACHE = 'lavajato-1788026353337';
 const APP_SHELL = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
